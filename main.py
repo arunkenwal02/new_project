@@ -8,6 +8,14 @@ from globalfunc import llm, git_token
 
 app = FastAPI()
 
+@app.post("/getpushid")
+def get_psuh_id(repo_url: str = Query(...)):
+    repo_info = get_repo_info(repo_url)
+    events = repo_info[2]
+    push_events = [e for e in events if e['type'] == 'PushEvent']
+    ids = [e['id'] for e in push_events]
+    return ids
+
 @app.post("/fetchpushhistory")
 def get_push_history(repo_url: str = Query(...),push_id1: str = Query(...),push_id2: str = Query(...)):    # Parse GitHub repo URL
     repo_info = get_repo_info(repo_url)
