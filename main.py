@@ -76,7 +76,7 @@ def get_push_history(repo_url: str = Query(...),push_id1: str = Query(...),push_
 
     
     return {
-        "intermediate_push_count": len(push_ids),
+        "total_push_count": len(push_ids),
         "total_commits": len(commits_list),
         "commits": commits_list,
         "diffs": diffs
