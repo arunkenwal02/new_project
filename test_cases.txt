@@ -1,63 +1,51 @@
-Here is a list of meaningful test cases to validate the data preprocessing, model training, predictions, and evaluation logic based on the provided Jupyter Notebook:
+Based on the content of the Jupyter Notebook, here are meaningful test cases to validate the data preprocessing, model training, predictions, and evaluation logic:
 
-### Data Preprocessing Test Cases
-1. **Check Column Renaming:**
-   - Verify that all columns with a dot (`.`) in their names are successfully replaced with an underscore (`_`).
+### Data Preprocessing
+- **Test Case 1:** Validate that the dataset is loaded correctly.
+  - **Input:** Load the dataset using `pd.read_csv('bankloan.csv')`.
+  - **Expected Output:** The DataFrame should have 5000 rows and 14 columns.
 
-2. **Check for Missing Values:**
-   - Ensure that there are no missing values in the dataset after loading it, particularly in the essential columns used for modeling.
+- **Test Case 2:** Verify that the `ZIP_Code` column is dropped correctly after identifying outliers.
+  - **Input:** Execute the code to drop the `ZIP_Code` column.
+  - **Expected Output:** The DataFrame should no longer contain the `ZIP_Code` column.
 
-3. **Check for Duplicates:**
-   - Verify that there are no duplicate records in the dataset after loading it.
+- **Test Case 3:** Check that the column names are formatted correctly (i.e., replace dots with underscores).
+  - **Input:** Execute the code to replace '.' with '_'.
+  - **Expected Output:** All column names in the DataFrame should have underscores instead of dots.
 
-4. **Outlier Detection:**
-   - Confirm that outliers are correctly identified in the `ZIP_Code` column using the box plot visualization.
+- **Test Case 4:** Validate that new columns `Exp_Gap` and `Income_per_Family` are created correctly.
+  - **Input:** Calculate `Exp_Gap` and `Income_per_Family`.
+  - **Expected Output:** The `Exp_Gap` should equal `Age - Experience` and `Income_per_Family` should equal `Income / Family` (with Family replaced by 1 if it's 0).
 
-5. **Check New Features:**
-   - Validate that the `Exp_Gap` and `Income_per_Family` columns are correctly computed and added to the dataframe.
+### Model Training
+- **Test Case 5:** Ensure the features and target variable are selected correctly for model training.
+  - **Input:** Execute the code to define `X` and `y`.
+  - **Expected Output:** `X` should contain all columns except `ZIP_Code`, `Personal_Loan`, and `ID`, while `y` should be the `Personal_Loan` column.
 
-6. **Data Type Verification:**
-   - Ensure that all columns have the expected data types after preprocessing, e.g., numerical columns should be of type `int64` or `float64`.
+- **Test Case 6:** Validate that the Random Forest model is trained correctly.
+  - **Input:** Fit the Random Forest pipeline on the training data.
+  - **Expected Output:** No errors during fitting; the model should be trained without exceptions.
 
-### Model Training Test Cases
-7. **Check Data Splitting:**
-   - Verify that the dataset is split into training and testing sets with the specified test size (e.g., 20%).
+### Predictions
+- **Test Case 7:** Check that predictions are made correctly for the test dataset.
+  - **Input:** Execute the prediction code using the trained model.
+  - **Expected Output:** The prediction array should have the same length as `y_test`.
 
-8. **Pipeline Creation:**
-   - Ensure that the pipelines for RandomForest, SVM, and Logistic Regression are created successfully without any errors.
+### Model Evaluation
+- **Test Case 8:** Validate the accuracy of the Random Forest model.
+  - **Input:** Calculate accuracy using `accuracy_score`.
+  - **Expected Output:** The accuracy should be a float between 0 and 1.
 
-9. **Model Fitting:**
-   - Check that each model (RandomForest, SVM, Logistic Regression) can be fitted to the training data without errors.
+- **Test Case 9:** Ensure that the classification report is generated correctly.
+  - **Input:** Generate the classification report.
+  - **Expected Output:** The report should include precision, recall, and f1-score for each class, as well as overall accuracy.
 
-### Predictions Test Cases
-10. **Check Predictions:**
-    - Verify that predictions can be made on the test set for all models without errors.
+- **Test Case 10:** Check that hyperparameter tuning with `GridSearchCV` improves model performance.
+  - **Input:** Fit the Random Forest pipeline with hyperparameter tuning.
+  - **Expected Output:** The accuracy with cross-validation should be greater than the baseline accuracy without tuning.
 
-11. **Check Predictions Shape:**
-    - Ensure that the shape of the predicted values matches the shape of the test set labels.
+- **Test Case 11:** Validate that best hyperparameters are retrieved correctly from the grid search.
+  - **Input:** Retrieve the best parameters from the fitted `GridSearchCV`.
+  - **Expected Output:** The best parameters should match expected values based on the defined grid.
 
-### Evaluation Logic Test Cases
-12. **Accuracy Calculation:**
-    - Validate that the accuracy scores calculated for RandomForest, SVM, and Logistic Regression are within an acceptable range (e.g., > 0.90).
-
-13. **Check Classification Report:**
-    - Ensure that the classification report contains precision, recall, and f1-score for both classes (0 and 1).
-
-14. **Hyperparameter Tuning:**
-    - Verify that `GridSearchCV` completes successfully and returns the best hyperparameters for the RandomForest model.
-
-15. **Check Hyperparameters:**
-    - Confirm that the best hyperparameters obtained from `GridSearchCV` are logical and within expected ranges (e.g., `n_estimators` should be a positive integer).
-
-16. **Check for Overfitting:**
-    - Compare training and testing accuracies to ensure that the model is not overfitting (i.e., the training accuracy should not be significantly higher than the testing accuracy).
-
-### Additional Test Cases
-17. **Check for Consistency in Data:**
-    - Validate that the processed data maintains the same number of rows as the original dataset, minus the dropped columns.
-
-18. **Check Data Visualization:**
-    - Ensure that the box plot visualization for numerical columns renders correctly and visually represents the data distribution.
-
-### Conclusion
-These test cases encompass essential aspects of data preprocessing, model training, predictions, and evaluation logic, ensuring the robustness and validity of the entire machine learning pipeline as implemented in the notebook.
+These test cases will help ensure that the notebook's data preprocessing, model training, prediction, and evaluation logic work correctly and produce expected outcomes.
