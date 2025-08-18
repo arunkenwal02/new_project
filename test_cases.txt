@@ -1,6 +1,63 @@
-### Auto-generated test cases for notebook ###
-            - Test that data preprocessing runs without errors
-            - Test model training with LogisticRegression
-            - Test prediction shape matches input rows
-            - Test evaluation metrics return valid values
-            
+Here is a list of meaningful test cases to validate the data preprocessing, model training, predictions, and evaluation logic based on the provided Jupyter Notebook:
+
+### Data Preprocessing Test Cases
+1. **Check Column Renaming:**
+   - Verify that all columns with a dot (`.`) in their names are successfully replaced with an underscore (`_`).
+
+2. **Check for Missing Values:**
+   - Ensure that there are no missing values in the dataset after loading it, particularly in the essential columns used for modeling.
+
+3. **Check for Duplicates:**
+   - Verify that there are no duplicate records in the dataset after loading it.
+
+4. **Outlier Detection:**
+   - Confirm that outliers are correctly identified in the `ZIP_Code` column using the box plot visualization.
+
+5. **Check New Features:**
+   - Validate that the `Exp_Gap` and `Income_per_Family` columns are correctly computed and added to the dataframe.
+
+6. **Data Type Verification:**
+   - Ensure that all columns have the expected data types after preprocessing, e.g., numerical columns should be of type `int64` or `float64`.
+
+### Model Training Test Cases
+7. **Check Data Splitting:**
+   - Verify that the dataset is split into training and testing sets with the specified test size (e.g., 20%).
+
+8. **Pipeline Creation:**
+   - Ensure that the pipelines for RandomForest, SVM, and Logistic Regression are created successfully without any errors.
+
+9. **Model Fitting:**
+   - Check that each model (RandomForest, SVM, Logistic Regression) can be fitted to the training data without errors.
+
+### Predictions Test Cases
+10. **Check Predictions:**
+    - Verify that predictions can be made on the test set for all models without errors.
+
+11. **Check Predictions Shape:**
+    - Ensure that the shape of the predicted values matches the shape of the test set labels.
+
+### Evaluation Logic Test Cases
+12. **Accuracy Calculation:**
+    - Validate that the accuracy scores calculated for RandomForest, SVM, and Logistic Regression are within an acceptable range (e.g., > 0.90).
+
+13. **Check Classification Report:**
+    - Ensure that the classification report contains precision, recall, and f1-score for both classes (0 and 1).
+
+14. **Hyperparameter Tuning:**
+    - Verify that `GridSearchCV` completes successfully and returns the best hyperparameters for the RandomForest model.
+
+15. **Check Hyperparameters:**
+    - Confirm that the best hyperparameters obtained from `GridSearchCV` are logical and within expected ranges (e.g., `n_estimators` should be a positive integer).
+
+16. **Check for Overfitting:**
+    - Compare training and testing accuracies to ensure that the model is not overfitting (i.e., the training accuracy should not be significantly higher than the testing accuracy).
+
+### Additional Test Cases
+17. **Check for Consistency in Data:**
+    - Validate that the processed data maintains the same number of rows as the original dataset, minus the dropped columns.
+
+18. **Check Data Visualization:**
+    - Ensure that the box plot visualization for numerical columns renders correctly and visually represents the data distribution.
+
+### Conclusion
+These test cases encompass essential aspects of data preprocessing, model training, predictions, and evaluation logic, ensuring the robustness and validity of the entire machine learning pipeline as implemented in the notebook.
