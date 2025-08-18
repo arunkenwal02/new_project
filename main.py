@@ -9,12 +9,33 @@ from globalfunc import llm, git_token
 app = FastAPI()
 
 @app.post("/getpushid")
-def get_psuh_id(repo_url: str = Query(...)):
-    repo_info = get_repo_info(repo_url)
-    events = repo_info[2]
+def get_push_id(repo_url: str = Query(...)):
+    GITHUB_API = "https://api.github.com"
+    headers = {
+        "Authorization": f"token {git_token}"
+    }
+    owner, repo, events = get_repo_info(repo_url)
+
     push_events = [e for e in events if e['type'] == 'PushEvent']
-    ids = [e['id'] for e in push_events]
-    return ids
+    ids = []
+
+    for event in push_events:
+        for commit in event.get("payload", {}).get("commits", []):
+            sha = commit.get("sha")
+            if sha:
+                # Fetch commit details to get changed files
+                commit_url = f"{GITHUB_API}/repos/{owner}/{repo}/commits/{sha}"
+                commit_resp = requests.get(commit_url, headers=headers)
+                if commit_resp.status_code == 200:
+                    commit_data = commit_resp.json()
+                    files = commit_data.get("files", [])
+                    for f in files:
+                        if f.get("filename") == "bank-loan-prediction-model.ipynb":
+                            ids.append(event["id"])
+                            break  # no need to check more files for this commit
+    
+    filtered_ids = list(set(ids))
+    return filtered_ids
 
 @app.post("/fetchpushhistory")
 def get_push_history(repo_url: str = Query(...),push_id1: str = Query(...),push_id2: str = Query(...)):    # Parse GitHub repo URL
@@ -58,21 +79,52 @@ def get_push_history(repo_url: str = Query(...),push_id1: str = Query(...),push_
             return {"error": f"Failed to fetch diff {c2}..{c1}: {resp.text}"}
 
         diff_data = resp.json()
-        patches = []
+        
+        processed_files = []
         for file in diff_data.get("files", []):
-            if "patch" in file:  
-                patches.append({
+            if "patch" in file and file["filename"] == "bank-loan-prediction-model.ipynb":
+                code_changes = []
+                for line in file["patch"].splitlines():
+                    # --- NEW FILTERING LOGIC ---
+                    # Ignore diff header lines
+                    if line.startswith('---') or line.startswith('+++') or line.startswith('@@'):
+                        continue
+                        
+                    # Ignore any lines containing "execution_count" regardless of prefix
+                    if "execution_count" in line:
+                        continue
+                    # --- END NEW FILTERING LOGIC ---
+
+                    # Only process lines that are additions or removals
+                    if line.startswith('-') or line.startswith('+'):
+                        # Strip leading '+', '-', and whitespace
+                        cleaned_line = line[1:].strip()
+                        # Remove JSON string formatting and escaped characters
+                        cleaned_line = cleaned_line.strip('",')
+                        cleaned_line = cleaned_line.strip('"')
+                        cleaned_line = cleaned_line.replace('\\n', '')
+                        # Remove HTML tags using a regular expression
+                        cleaned_line = re.sub('<[^>]+>', '', cleaned_line)
+                        
+                        # Re-add the diff indicator (+ or -) to the cleaned line
+                        code_changes.append(line[0] + ' ' + cleaned_line)
+                            
+                processed_files.append({
                     "filename": file["filename"],
-                    "patch": file["patch"]
+                    "extracted_code_changes": code_changes
                 })
-        if patches:
+
+        if processed_files:
             diffs.append({
                 "target": c2,
                 "base": c1,
-                "patches": patches
+                "files": processed_files
             })
+
+    
     with open("push_events.json", "w") as f:
-        json.dump([push_id1,push_id2, owner, repo_name], f, indent=2)
+        json.dump([push_id1,push_id2, owner, repo_name, repo_url], f, indent=2)
+
 
     
     return {
@@ -82,18 +134,58 @@ def get_push_history(repo_url: str = Query(...),push_id1: str = Query(...),push_
         "diffs": diffs
     }
 
+
 @app.get('/createsummary')
 def create_summary_of_events():
     json_res = json_data()
     summary = create_summary(json_res)
     return summary
 
+
+    
 @app.get('/test_cases')
 def generate_tescases():
-    path = file_url()
-    check = is_test_cases_relevant(path[0], path[1])
-    if not check:
-        cases = test_cases_generation()
-        return "Test cases are not relevant — generating new ones...", cases
-    else:
-        return "Test cases are already relevant to the notebook."
+    commits = get_push_commits()
+    sha = get_latest_commit_sha(commits)
+
+    # Load push_id from push_events.json
+    with open("push_events.json", "r") as file:
+        data = json.load(file)
+    push_id = data[1]
+
+    # --- Check last saved state ---
+    state_file = "last_state.json"
+    last_push_id, last_sha = None, None
+    if os.path.exists(state_file):
+        with open(state_file, "r") as f:
+            state = json.load(f)
+            last_push_id = state.get("push_id")
+            last_sha = state.get("sha")
+
+    if push_id == last_push_id and sha == last_sha:
+        return f'Test cases for push id {push_id} are already created.'
+
+    notebook_content = get_file_content("bank-loan-prediction-model.ipynb", sha)
+    test_cases = get_file_content("test_cases.txt", sha) or ""
+
+    if not is_test_cases_relevant(notebook_content, test_cases):
+        new_test_cases = generate_test_cases(notebook_content)
+        update_file("test_cases.txt", new_test_cases, sha)
+        print("✅ test_cases.txt updated with new test cases")
+        result = new_test_cases
+   
+
+    # --- Save current state ---
+    with open(state_file, "w") as f:
+        json.dump({"push_id": push_id, "sha": sha}, f)
+
+    return result
+
+
+
+# [
+#   "53423000678",
+#   "53422753715",
+#   "53422014166",
+#   "53421701115"
+# ]

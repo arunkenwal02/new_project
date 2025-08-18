@@ -12,6 +12,10 @@ from pprint import pprint
 import os
 import nbformat
 from difflib import SequenceMatcher
+import base64
+from github import Github
+
+
 load_dotenv() 
 
 OPENAI_API_KEY = env['OPENAI_API_KEY']
@@ -42,10 +46,10 @@ def get_repo_info(repo_url):
     events = response.json()
     return owner, repo_name, events
 
-
 def json_data():
     with open("push_events.json", "r") as file:
         data = json.load(file)
+
     owner = data[2]
     repo_name = data[3]
     api_url = f"https://api.github.com/repos/{owner}/{repo_name}/events"
@@ -54,12 +58,11 @@ def json_data():
         headers["Authorization"] = f"token {git_token}"
 
     response = requests.get(api_url, headers=headers)
-    # response = requests.get(api_url)
     events = response.json()
 
     push_events = [e for e in events if e['type'] == 'PushEvent']
-
     ids = [e['id'] for e in push_events]
+
     try:
         idx1 = ids.index(data[0])
         idx2 = ids.index(data[1])
@@ -68,7 +71,6 @@ def json_data():
 
     start = min(idx1, idx2)
     end = max(idx1, idx2)
-
     history_between = push_events[start:end+1]  
 
     commits_list = []
@@ -93,63 +95,94 @@ def json_data():
 
         url = f"https://api.github.com/repos/{owner}/{repo_name}/compare/{c2}...{c1}"
         resp = requests.get(url, headers=headers)
-
         if resp.status_code != 200:
-            return {"error": f"Failed to fetch diff {c1}..{c2}: {resp.text}"}
+            return {"error": f"Failed to fetch diff {c2}..{c1}: {resp.text}"}
 
         diff_data = resp.json()
-        diffs.append({
-            "from": c2,
-            "to": c1,
-            "from_message": commits_list[i-1]["message"],
-            "to_message": commits_list[i]["message"],
-            "files_changed": diff_data.get("files", [])
-        })
+        processed_files = []
 
-    return {
-        "diffs": diffs
-    }
+        for file in diff_data.get("files", []):
+            if "patch" in file and file["filename"] == "bank-loan-prediction-model.ipynb":
+                code_changes = []
+                for line in file["patch"].splitlines():
+                    # Ignore diff header lines
+                    if line.startswith(('---', '+++', '@@')):
+                        continue
+                    # Ignore execution_count
+                    if "execution_count" in line:
+                        continue
+                    # Only process added/removed lines
+                    if line.startswith(('+', '-')):
+                        cleaned_line = line[1:].strip()
+                        cleaned_line = cleaned_line.strip('",')
+                        cleaned_line = cleaned_line.strip('"')
+                        cleaned_line = cleaned_line.replace('\\n', '')
+                        cleaned_line = re.sub('<[^>]+>', '', cleaned_line)
+
+                        if cleaned_line:  # only keep meaningful changes
+                            code_changes.append(line[0] + ' ' + cleaned_line)
+
+                if code_changes:  # add only if non-empty patch
+                    processed_files.append({
+                        "filename": file["filename"],
+                        "patch": code_changes
+                    })
+
+        # ✅ Append diff only if files_changed is not empty
+        if processed_files:
+            diffs.append({
+                "from": c2,
+                "to": c1,
+                "from_message": commits_list[i-1]["message"],
+                "to_message": commits_list[i]["message"],
+                "files_changed": processed_files
+            })
+
+    return {"diffs": diffs}
+
 
 def create_summary(json_data):
     if isinstance(json_data, dict):
         json_data = [json_data]
 
     req_data = json.dumps(json_data, indent=2)
-
     summary_prompt_template = """
-            You are an expert at analyzing GitHub commit diffs and push events.
+    You are an expert software engineer and technical writer.  
+    I will provide you with one or more commit diffs that include:
+    - "target" commit hash and "base" commit hash
+    - a list of files changed, along with extracted code changes
 
-            Start your output with an **Overall Summary** as a single, detailed narrative paragraph of at least 700 to 1000 words:
-            - Include the repository name (if available)
-            - Mention the total number of commits being analyzed
-            - Integrate all commit messages ('from_message' and 'to_message') into a natural, flowing story
-            - Highlight major changes across all commits, including new features, bug fixes, refactoring, and dependency updates
-            - Explain the impact of these changes on the repository’s functionality, maintainability, and usability
-            - Use descriptive language to provide context about why each change matters and how the commits relate to each other
-            - Avoid bullet points or lists—write it as a single cohesive paragraph
+    Your task:  
+    1. Generate an **Overall Summary** that explains the main themes and impact of all commits combined.  
+    - Highlight how the project evolved across these changes.  
+    - Summarize the broader direction (e.g., schema improvements, feature engineering, bug fixes, performance enhancements).  
 
+    2. For each commit, generate a **Commit Diff Summary** with the following structure:  
+    - **Target** and **Base** commit hashes  
+    - **Target** and **Base** commit messages
+    - **Textual Summary**: A detailed natural-language explanation of what was added, modified, or removed, and why it matters.  
+    - **Code Difference Summary**: A clear textual description of the code-level changes (e.g., column renames, new imports, added functions, removed logic, or feature engineering additions).  
 
-            After the overall summary, for **each commit comparison** in the input JSON:
-            1. Write a "Textual Summary" section:
-                - Include the short SHA (first 7 characters) of 'from' and 'to'
-                - Include the commit messages ('from_message' and 'to_message')
-                - Number of files changed
-                - Brief description of the purpose of the change in plain English
-                - Mention if the change updates dependencies or adds major features
+    3. Be **descriptive and deep**. Do not write one-liners.  
+    - Assume the reader is a developer who wants to understand the commit without reading raw diffs.  
+    - Mention both functional impact (how the code will behave differently) and structural impact (readability, maintainability, consistency).  
 
-            2. Write a "Code Difference Summary" section:
-                - Describe file-level changes (created, modified, deleted)
-                - Explain the intent of significant changes, like bug fixes, new features, or dependency upgrades
-                - Do NOT include raw code; only describe the effect of changes
+    4. After all commit summaries, provide a **✅ Final Takeaway** section that synthesizes the importance of these commits together.  
+   - Highlight the overall project trajectory, maturity, and likely goals.  
+   - Provide insight into how these changes collectively improve functionality, maintainability, or predictive performance.  
 
-            Skip any comparison where 'files_changed' is an empty list.
+    5. The output must always follow this structure:  
+    🔹 Overall Summary  
+    🔹 Commit Diff 1  
+    🔹 Commit Diff 2  
+    … (and so on for each commit)  
+    ✅ Final Takeaway  
 
-            Use exactly the headings "Overall Summary:", "Textual Summary:", and "Code Difference Summary:" for the output. Repeat this format for all valid comparisons.
+    Context:  
+    {context}  
 
-            Here is the input JSON:
-            Context: 
-            {context}
-            """
+    Now provide the **Overall Summary** followed by per-commit summaries as described above.  
+    """
 
     summary_prompt = PromptTemplate(
         template=summary_prompt_template,
@@ -160,81 +193,121 @@ def create_summary(json_data):
 
     response = llm.invoke(formatted_prompt)
     pprint(response.content)
-    with open("event_summary.txt", "w", encoding="utf-8") as f:
-        f.write(response.content)
+
+    # with open("event_summary.txt", "w", encoding="utf-8") as f:
+    #     f.write(response.content)
+
     return response.content
 
-def test_cases_generation():
-    prompt = """
-        You are an expert in Python, PyTest, and Data Science workflows. 
-        Generate **comprehensive, well-structured PyTest test cases** (including edge cases and negative scenarios) 
-        for validating a full machine learning pipeline that includes the following steps:
-
-        1. **Data Processing** - Validate data cleaning, handling missing values, and type conversions.  
-        2. **EDA (Exploratory Data Analysis)** - Ensure data summaries, correlations, and statistical outputs are correct.  
-        3. **Data Distribution** - Test histogram generation, skewness/kurtosis calculations, and distribution fitting.  
-        4. **Encoding** - Test Label Encoding, One-Hot Encoding, and `pd.get_dummies()` to ensure correctness for both categorical and mixed data types.  
-        5. **Train-Test Split** - Validate splitting ratio correctness, stratification for imbalanced datasets, and randomness seed reproducibility.  
-        6. **Model Training** - Verify training pipelines for Logistic Regression, Decision Tree, and Random Forest, ensuring model parameters and fitting steps are correct.  
-        7. **Metrics Calculation** - Test accuracy, precision, recall, and f1-score calculations for correctness using both balanced and imbalanced datasets.
-
-        Requirements for the output:
-        - Use **pytest** framework.
-        - Include **mock data** or fixtures where needed.
-        - Add **edge cases**, such as empty datasets, all-null columns, and unseen categories during encoding.
-        - Cover **invalid input handling**.
-        - Ensure **assertions** verify correctness of outputs and expected exceptions.
-        - Organize tests into classes or modules per pipeline step.
-        - Include **descriptive comments** explaining each test case.
-    """
-    summary_prompt = PromptTemplate(
-        template=prompt,
-        input_variables=[]
-    )
-
-    formatted_prompt = summary_prompt.format()
-
-    response = llm.invoke(formatted_prompt)
-    pprint(response.content)
-    with open('test_cases.txt', 'w') as f:
-        f.write(response.content)
-    return response.content
-
-
-
-def is_test_cases_relevant(notebook_path, test_cases_path, threshold=0.3):
-    """Check if test_cases.txt is relevant to the notebook content."""
-    if not os.path.exists(test_cases_path):
-        return False
-
-    nb = nbformat.read(notebook_path, as_version=4)
-    nb_content = " ".join([cell['source'] for cell in nb.cells if cell['cell_type'] == 'code' or cell['cell_type'] == 'markdown'])
-
-    with open(test_cases_path, 'r') as f:
-        test_cases_content = f.read()
-
-    similarity = SequenceMatcher(None, nb_content.lower(), test_cases_content.lower()).ratio()
-    print(f"Similarity Score: {similarity:.2f}")
-
-    return similarity >= threshold
-
-def file_url():
-    with open('test_cases.txt', "w") as f:
-            f.write("")
+def get_push_commits():
     with open("push_events.json", "r") as file:
         data = json.load(file)
     owner = data[2]
     repo_name = data[3]
-    notebook_raw_url = f"https://raw.githubusercontent.com/{owner}/{repo_name}/main/loan-approval-prediction_v1.ipynb"
-    local_notebook_path = "loan-approval-prediction_v1.ipynb"
+    push_id = data[1]
+    headers = {}
+    if git_token:
+        headers["Authorization"] = f"token {git_token}"
+    url = f"https://api.github.com/repos/{owner}/{repo_name}/events"
+    resp = requests.get(url, headers=headers)
+    resp.raise_for_status()
 
-    r = requests.get(notebook_raw_url)
-    r.raise_for_status()
-    with open(local_notebook_path, "wb") as f:
-        f.write(r.content)
-
-    testcases_path = "test_cases.txt"
-    return local_notebook_path, testcases_path
+    events = resp.json()
+    push_event = [e for e in events if e['type'] == 'PushEvent' and e['id'] == push_id]
     
+    if not push_event:
+        raise ValueError(f"Push event {push_id} not found")
+    commits = push_event[0]["payload"]["commits"]
+    return commits
 
+def get_latest_commit_sha(commits):
+    with open("push_events.json", "r") as file:
+        data = json.load(file)
+    owner = data[2]
+    repo_name = data[3]
+    file_path = "bank-loan-prediction-model.ipynb"
+    headers = {}
+    if git_token:
+        headers["Authorization"] = f"token {git_token}"
+    latest_sha = None
+    for commit in reversed(commits):  
+        sha = commit["sha"]
+        url = f"https://api.github.com/repos/{owner}/{repo_name}/commits/{sha}"
+        resp = requests.get(url, headers=headers)
+        resp.raise_for_status()
+        files = resp.json().get("files", [])
+        for f in files:
+            if f["filename"] == file_path:
+                latest_sha = sha
+                break
+    return latest_sha
 
+def get_file_content(file_path, sha):
+    with open("push_events.json", "r") as file:
+        data = json.load(file)
+    repo_url = data[4]
+    owner = data[2]
+    repo_name = data[3]
+    headers = {}
+    if git_token:
+        headers["Authorization"] = f"token {git_token}"
+    url = f"https://api.github.com/repos/{owner}/{repo_name}/contents/{file_path}?ref={sha}"
+    resp = requests.get(url, headers=headers)
+    if resp.status_code == 404:
+        return None
+    resp.raise_for_status()
+    content = resp.json()["content"]
+    return base64.b64decode(content).decode("utf-8")
+
+def is_test_cases_relevant(notebook_content: str, test_cases: str) -> bool:
+    """
+    Check if test_cases mention functions, models, or important keywords from notebook.
+    """
+    if not test_cases.strip():
+        return False
+
+    # Extract keywords: function names, class names, sklearn models, etc.
+    keywords = set()
+
+    # Regex to find functions and classes
+    keywords.update(re.findall(r"def\s+(\w+)", notebook_content))
+    keywords.update(re.findall(r"class\s+(\w+)", notebook_content))
+
+    # Capture sklearn models
+    keywords.update(re.findall(r"from\s+sklearn\.\w+\s+import\s+(\w+)", notebook_content))
+
+    # Capture dataframe column names
+    keywords.update(re.findall(r'"([A-Za-z0-9_]+)"', notebook_content))
+
+    # Check if any keyword is in test_cases
+    return any(kw in test_cases for kw in keywords)
+
+# ---------- Step 6: Generate test cases with LLM ----------
+def generate_test_cases(notebook_content: str) -> str:
+    prompt = """
+    You are an assistant that writes software test cases.
+
+    The following is the content of a Jupyter Notebook:
+    ---
+    {notebook_content}
+    ---
+    Based on this notebook, generate a list of meaningful test cases
+    that validate the data preprocessing, model training, predictions,
+    and evaluation logic. Output them as a clear, bullet-point list.
+    """
+    formatted_prompt = prompt.format(notebook_content=notebook_content)
+
+    response = llm.invoke(formatted_prompt)
+    
+    return response.content
+
+# ---------- Step 7: Commit update to repo ----------
+def update_file(path: str, content: str, sha: str, message="Update test cases"):
+    with open("push_events.json", "r") as file:
+        data = json.load(file)
+    owner = data[2]
+    repo_name = data[3]
+    g = Github(git_token)
+    repo_obj = g.get_repo(f"{owner}/{repo_name}")
+    file = repo_obj.get_contents(path, ref="main")  
+    repo_obj.update_file(path, message, content, file.sha, branch="main")
