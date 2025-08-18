@@ -1,0 +1,6 @@
+### Auto-generated test cases for notebook ###
+            - Test that data preprocessing runs without errors
+            - Test model training with LogisticRegression
+            - Test prediction shape matches input rows
+            - Test evaluation metrics return valid values
+            
