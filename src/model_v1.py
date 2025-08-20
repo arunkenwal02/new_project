@@ -14,13 +14,13 @@ from sklearn.neighbors import KNeighborsClassifier
 from pprint import pprint
 
 df = pd.read_csv('/Users/arunkenwal/Desktop/new_project/model_resources/bankloan.csv')
-pprint(df.head(10))
+# pprint(df.head(10))
 
-print(df.info())
+# print(df.info())
 
-pprint(df.columns)
+# pprint(df.columns)
 
-pprint(df.shape)
+# pprint(df.shape)
 
 ####### Let's Check Outliers in our Columns ############
 
@@ -53,4 +53,7 @@ df["Income_Education"] = df["Income"] * df["Education"]
 df["Exp_Education"] = df["Experience"] * df["Education"]
 df["CC_per_Family"] = df["CCAvg"] / (df["Family"].replace(0, 1))
 
-pprint(df)
+# pprint(df)
+
+################# Baseline Model ########################
+
