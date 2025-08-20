@@ -57,3 +57,6 @@ df["CC_per_Family"] = df["CCAvg"] / (df["Family"].replace(0, 1))
 
 ################# Baseline Model ########################
 
+# assuming 'ZIP_Code' and 'Personal_Loan' are columns in the dataFrame
+X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)  
+y = df['Personal_Loan']  # target variable
