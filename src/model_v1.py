@@ -83,3 +83,26 @@ pipeline_knn = Pipeline([
     ('scaler', StandardScaler()),
     ('classifier', KNeighborsClassifier())
 ])
+
+# fitting the pipelines
+pipeline_rf.fit(X_train, y_train)
+pipeline_svm.fit(X_train, y_train)
+pipeline_lr.fit(X_train, y_train)
+pipeline_knn.fit(X_train, y_train)
+
+# predictions
+y_pred_rf = pipeline_rf.predict(X_test)
+y_pred_svm = pipeline_svm.predict(X_test)
+y_pred_lr = pipeline_lr.predict(X_test)
+y_pred_knn = pipeline_knn.predict(X_test)
+
+# performance
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+accuracy_svm = accuracy_score(y_test, y_pred_svm)
+accuracy_lr = accuracy_score(y_test, y_pred_lr)
+accuracy_knn = accuracy_score(y_test, y_pred_knn)
+
+print("Random Forest Accuracy:", accuracy_rf)
+print("SVM Accuracy:", accuracy_svm)
+print("Logistic Regression Accuracy:", accuracy_lr)
+print("KNN Accuracy:", accuracy_knn)
