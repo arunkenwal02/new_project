@@ -60,3 +60,5 @@ df["CC_per_Family"] = df["CCAvg"] / (df["Family"].replace(0, 1))
 # assuming 'ZIP_Code' and 'Personal_Loan' are columns in the dataFrame
 X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)  
 y = df['Personal_Loan']  # target variable
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
