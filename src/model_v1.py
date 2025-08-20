@@ -164,3 +164,8 @@ print("Random Forest Accuracy (with CV):", accuracy_svm_cv)
 best_params_svm = pipeline_svm_cv.named_steps['classifier'].best_params_
 print("\nBest Hyperparameters for SVM:")
 print(best_params_svm)
+
+
+############### Model Evaluation ####################
+classification_rep = classification_report(y_test, y_pred_rf_cv)
+print("Classification Report:\n", classification_rep)
