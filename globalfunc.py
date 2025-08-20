@@ -14,7 +14,7 @@ import nbformat
 from difflib import SequenceMatcher
 import base64
 from github import Github
-
+import nbformat
 
 load_dotenv() 
 
@@ -102,7 +102,7 @@ def json_data():
         processed_files = []
 
         for file in diff_data.get("files", []):
-            if "patch" in file and file["filename"] == "bank-loan-prediction-model.ipynb":
+            if "patch" in file and file["filename"] == "loan-approval-prediction.ipynb":
                 code_changes = []
                 for line in file["patch"].splitlines():
                     # Ignore diff header lines
@@ -194,8 +194,8 @@ def create_summary(json_data):
     response = llm.invoke(formatted_prompt)
     pprint(response.content)
 
-    # with open("event_summary.txt", "w", encoding="utf-8") as f:
-    #     f.write(response.content)
+    with open("event_summary.txt", "w", encoding="utf-8") as f:
+        f.write(response.content)
 
     return response.content
 
@@ -218,6 +218,7 @@ def get_push_commits():
     if not push_event:
         raise ValueError(f"Push event {push_id} not found")
     commits = push_event[0]["payload"]["commits"]
+
     return commits
 
 def get_latest_commit_sha(commits):
@@ -225,7 +226,7 @@ def get_latest_commit_sha(commits):
         data = json.load(file)
     owner = data[2]
     repo_name = data[3]
-    file_path = "bank-loan-prediction-model.ipynb"
+    file_path = "loan-approval-prediction.ipynb"
     headers = {}
     if git_token:
         headers["Authorization"] = f"token {git_token}"
@@ -240,7 +241,9 @@ def get_latest_commit_sha(commits):
             if f["filename"] == file_path:
                 latest_sha = sha
                 break
+
     return latest_sha
+
 
 def get_file_content(file_path, sha):
     with open("push_events.json", "r") as file:
@@ -259,6 +262,32 @@ def get_file_content(file_path, sha):
     content = resp.json()["content"]
     return base64.b64decode(content).decode("utf-8")
 
+def extract_code_cells_from_raw(nb_raw: str) -> str:
+    try:
+        nb = nbformat.reads(nb_raw, as_version=4)
+        code_cells = [
+            cell['source'] for cell in nb.cells
+            if cell['cell_type'] == 'code'
+        ]
+        return "\n\n".join(code_cells)
+        
+    except Exception:
+        return nb_raw
+
+def chunk_text(text, max_chunk_size=20000):
+    """Split text into smaller chunks (so we never exceed token limit)."""
+    lines = text.splitlines()
+    chunks, current_chunk, length = [], [], 0
+    for line in lines:
+        length += len(line.split())
+        if length > max_chunk_size:
+            chunks.append("\n".join(current_chunk))
+            current_chunk, length = [], 0
+        current_chunk.append(line)
+    if current_chunk:
+        chunks.append("\n".join(current_chunk))
+    return chunks
+
 def is_test_cases_relevant(notebook_content: str, test_cases: str) -> bool:
     """
     Check if test_cases mention functions, models, or important keywords from notebook.
@@ -266,42 +295,45 @@ def is_test_cases_relevant(notebook_content: str, test_cases: str) -> bool:
     if not test_cases.strip():
         return False
 
-    # Extract keywords: function names, class names, sklearn models, etc.
     keywords = set()
 
-    # Regex to find functions and classes
     keywords.update(re.findall(r"def\s+(\w+)", notebook_content))
     keywords.update(re.findall(r"class\s+(\w+)", notebook_content))
 
-    # Capture sklearn models
     keywords.update(re.findall(r"from\s+sklearn\.\w+\s+import\s+(\w+)", notebook_content))
 
-    # Capture dataframe column names
     keywords.update(re.findall(r'"([A-Za-z0-9_]+)"', notebook_content))
 
-    # Check if any keyword is in test_cases
     return any(kw in test_cases for kw in keywords)
 
-# ---------- Step 6: Generate test cases with LLM ----------
-def generate_test_cases(notebook_content: str) -> str:
-    prompt = """
-    You are an assistant that writes software test cases.
 
-    The following is the content of a Jupyter Notebook:
-    ---
-    {notebook_content}
-    ---
-    Based on this notebook, generate a list of meaningful test cases
-    that validate the data preprocessing, model training, predictions,
-    and evaluation logic. Output them as a clear, bullet-point list.
-    """
-    formatted_prompt = prompt.format(notebook_content=notebook_content)
+def generate_test_cases(nb_raw: str) -> str:
+    notebook_content = extract_code_cells_from_raw(nb_raw)
 
-    response = llm.invoke(formatted_prompt)
+    chunks = chunk_text(notebook_content)
+
+    all_cases = []
+    for i, chunk in enumerate(chunks, start=1):
+        prompt = f"""
+        You are an assistant that writes software test cases.
+
+        The following is part {i} of a Jupyter Notebook (only code cells):
+        ---
+        {chunk}
+        ---
+        Based on this code, generate meaningful test cases that validate preprocessing, model training, predictions, and evaluation. 
+        Each test case should include: 
+        - A title (e.g., Test Case 1: Data Import Validation). 
+        - A description of what it validates. 
+        - A 'How to Perform' section with Python code snippets that show how the test can be executed. 
+
+        Output them as a clear, bullet-point list with proper formatting.
+        """
+        response = llm.invoke(prompt)
+        all_cases.append(response.content)
+    return "\n".join(all_cases)
     
-    return response.content
 
-# ---------- Step 7: Commit update to repo ----------
 def update_file(path: str, content: str, sha: str, message="Update test cases"):
     with open("push_events.json", "r") as file:
         data = json.load(file)
@@ -311,3 +343,4 @@ def update_file(path: str, content: str, sha: str, message="Update test cases"):
     repo_obj = g.get_repo(f"{owner}/{repo_name}")
     file = repo_obj.get_contents(path, ref="main")  
     repo_obj.update_file(path, message, content, file.sha, branch="main")
+

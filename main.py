@@ -4,6 +4,9 @@ from fastapi import FastAPI, Query, HTTPException, UploadFile, File
 from langchain_core.documents import Document
 from globalfunc import *
 from globalfunc import llm, git_token
+import tiktoken
+import os
+import re
 
 
 app = FastAPI()
@@ -30,7 +33,7 @@ def get_push_id(repo_url: str = Query(...)):
                     commit_data = commit_resp.json()
                     files = commit_data.get("files", [])
                     for f in files:
-                        if f.get("filename") == "bank-loan-prediction-model.ipynb":
+                        if f.get("filename") == "loan-approval-prediction.ipynb":
                             ids.append(event["id"])
                             break  # no need to check more files for this commit
     
@@ -82,7 +85,7 @@ def get_push_history(repo_url: str = Query(...),push_id1: str = Query(...),push_
         
         processed_files = []
         for file in diff_data.get("files", []):
-            if "patch" in file and file["filename"] == "bank-loan-prediction-model.ipynb":
+            if "patch" in file and file["filename"] == "loan-approval-prediction.ipynb":
                 code_changes = []
                 for line in file["patch"].splitlines():
                     # --- NEW FILTERING LOGIC ---
@@ -148,12 +151,10 @@ def generate_tescases():
     commits = get_push_commits()
     sha = get_latest_commit_sha(commits)
 
-    # Load push_id from push_events.json
     with open("push_events.json", "r") as file:
         data = json.load(file)
     push_id = data[1]
 
-    # --- Check last saved state ---
     state_file = "last_state.json"
     last_push_id, last_sha = None, None
     if os.path.exists(state_file):
@@ -162,10 +163,18 @@ def generate_tescases():
             last_push_id = state.get("push_id")
             last_sha = state.get("sha")
 
-    if push_id == last_push_id and sha == last_sha:
-        return f'Test cases for push id {push_id} are already created.'
+    # if push_id == last_push_id and sha == last_sha:
+    #     return f'Test cases for push id {push_id} are already created.'
 
-    notebook_content = get_file_content("bank-loan-prediction-model.ipynb", sha)
+    notebook_content = get_file_content("loan-approval-prediction.ipynb", sha)
+
+    try:
+        nb = nbformat.reads(notebook_content, as_version=4)
+        code_cells = [cell['source'] for cell in nb.cells if cell['cell_type'] == 'code']
+        notebook_content = "\n".join(code_cells)
+    except Exception as e:
+        print(f"⚠️ Could not parse notebook as nbformat, falling back to raw content. Error: {e}")
+
     test_cases = get_file_content("test_cases.txt", sha) or ""
 
     if not is_test_cases_relevant(notebook_content, test_cases):
@@ -173,19 +182,10 @@ def generate_tescases():
         update_file("test_cases.txt", new_test_cases, sha)
         print("✅ test_cases.txt updated with new test cases")
         result = new_test_cases
-   
+    else:
+        result = "ℹ️ Test cases are already relevant. No update needed."
 
-    # --- Save current state ---
     with open(state_file, "w") as f:
         json.dump({"push_id": push_id, "sha": sha}, f)
 
     return result
-
-
-
-# [
-#   "53423000678",
-#   "53422753715",
-#   "53422014166",
-#   "53421701115"
-# ]

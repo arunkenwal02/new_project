@@ -3,3 +3,4 @@ venv/
 __pycache__/
 push_events.json
 last_state.json
+event_summary.txt
