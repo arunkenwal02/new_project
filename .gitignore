@@ -1,6 +1,5 @@
 venv/
 .env
 __pycache__/
-push_events.json
-last_state.json
-event_summary.txt
+code_validator/*.json
+code_validator/event_summary.txt
