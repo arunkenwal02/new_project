@@ -138,3 +138,29 @@ print("Random Forest Accuracy (with CV):", accuracy_rf_cv)
 best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
 print("\nBest Hyperparameters for RandomForestClassifier:")
 print(best_params_rf)
+
+param_grid_svm = {
+    'C': [0.1, 1, 10],              # Regularization strength
+    'kernel': ['linear', 'rbf'],    # Linear or Gaussian kernel
+    'gamma': ['scale', 'auto']      # Kernel coefficient
+}
+
+# Pipeline with scaler + GridSearchCV for SVM
+pipeline_svm_cv = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', GridSearchCV(SVC(), param_grid_svm, cv=5))
+])
+
+pipeline_svm_cv.fit(X_train, y_train)
+
+# best hyperparameters and predictions
+y_pred_svm_cv = pipeline_svm_cv.predict(X_test)
+
+
+accuracy_svm_cv = accuracy_score(y_test, y_pred_svm_cv)
+print("Random Forest Accuracy (with CV):", accuracy_svm_cv)
+
+
+best_params_svm = pipeline_svm_cv.named_steps['classifier'].best_params_
+print("\nBest Hyperparameters for SVM:")
+print(best_params_svm)
