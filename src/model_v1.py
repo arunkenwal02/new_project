@@ -73,3 +73,13 @@ pipeline_svm = Pipeline([
     ('scaler', StandardScaler()),
     ('classifier', SVC())
 ])
+
+pipeline_lr = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', LogisticRegression())
+])
+
+pipeline_knn = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', KNeighborsClassifier())
+])
