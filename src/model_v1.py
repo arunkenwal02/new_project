@@ -62,3 +62,14 @@ X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
 y = df['Personal_Loan']  # target variable
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# pipeline with different classifiers
+pipeline_rf = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', RandomForestClassifier())
+])
+
+pipeline_svm = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', SVC())
+])
