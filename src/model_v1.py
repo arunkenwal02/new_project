@@ -106,3 +106,35 @@ print("Random Forest Accuracy:", accuracy_rf)
 print("SVM Accuracy:", accuracy_svm)
 print("Logistic Regression Accuracy:", accuracy_lr)
 print("KNN Accuracy:", accuracy_knn)
+
+
+######################## Hyperparameter Tuning ###########################
+#Through this code we will use `GridSearchCV` and will print Best parameters can get Higher Performance
+
+# hyperparameter grids for RandomForestClassifier
+param_grid_rf = {
+    'n_estimators': [10, 50, 100],
+    'max_depth': [None, 10, 20],
+    'min_samples_split': [2, 5, 10],
+}
+
+
+pipeline_rf_cv = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', GridSearchCV(RandomForestClassifier(), param_grid_rf, cv=5))
+])
+
+# cross-validation and hyperparameter tuning
+pipeline_rf_cv.fit(X_train, y_train)
+
+# best hyperparameters and predictions
+y_pred_rf_cv = pipeline_rf_cv.predict(X_test)
+
+
+accuracy_rf_cv = accuracy_score(y_test, y_pred_rf_cv)
+print("Random Forest Accuracy (with CV):", accuracy_rf_cv)
+
+
+best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
+print("\nBest Hyperparameters for RandomForestClassifier:")
+print(best_params_rf)
