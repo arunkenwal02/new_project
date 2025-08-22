@@ -44,8 +44,8 @@ df.columns = [col.replace('.', '_') for col in df.columns]
 
 df["Exp_Gap"] = df["Age"] - df["Experience"]
 df["Income_per_Family"] = np.round(df["Income"] / (df["Family"].replace(0, 2)), 4)
-df["CC_Spend_Ratio"] = df["CCAvg"] / (df["Income"] + 1)
-df["Mortgage_Income_Ratio"] = df["Mortgage"] / (df["Income"] + 1)
+df["CC_Spend_Ratio"] = df["CCAvg"] / (df["Income"] + 2)
+df["Mortgage_Income_Ratio"] = df["Mortgage"] / (df["Income"] + 2)
 df["Income_Mortgage_Ratio"] = df["Income"] / (df["Mortgage"] + 1)
 df["Account_Score"] = df["Securities_Account"] + df["CD_Account"] + df["CreditCard"]
 df["Digital_Score"] = df["Online"] + df["CreditCard"]
