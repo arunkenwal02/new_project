@@ -113,9 +113,9 @@ print("KNN Accuracy:", accuracy_knn)
 
 # hyperparameter grids for RandomForestClassifier
 param_grid_rf = {
-    'n_estimators': [10, 50, 100],
-    'max_depth': [None, 10, 20],
-    'min_samples_split': [2, 5, 10],
+    'n_estimators': [50, 100, 200, 300],
+    'max_depth': [5, 10, 20, 30, None],
+    'min_samples_split': [2, 5, 10, 20],
 }
 
 
