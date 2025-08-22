@@ -337,7 +337,6 @@ def create_summary(json_data):
         f.write(response.content)
 
     return response.content
-#-------------------------------------------------------------------
 
 
 def get_push_commits():
