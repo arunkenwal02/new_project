@@ -234,10 +234,10 @@ def generate_testcases():
         return {"error": "⚠️ Could not fetch src/model_v1.py at this commit."}
 
     source_code = py_content
-    test_cases = get_file_content("test_cases.txt", sha) or ""
+    test_cases = get_file_content("test_cases.py", sha) or ""
 
     new_test_cases = generate_test_cases(source_code)
-    update_file("test_cases/test_cases.txt" , new_test_cases, sha)
+    update_file("test_cases/test_cases.py" , new_test_cases, sha)
 
     return {
         "message": "✅ test_cases.txt updated with new test cases",
