@@ -140,11 +140,10 @@ print("\nBest Hyperparameters for RandomForestClassifier:")
 print(best_params_rf)
 
 param_grid_svm = {
-    'C': [0.1, 1, 10],              # Regularization strength
-    'kernel': ['linear', 'rbf'],    # Linear or Gaussian kernel
-    'gamma': ['scale', 'auto']      # Kernel coefficient
+    'C': [0.1, 1, 10, 50, 100],             # Regularization strength
+    'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],  # Different kernel types
+    'gamma': ['scale', 'auto', 0.01, 0.001] # Kernel coefficient options
 }
-
 # Pipeline with scaler + GridSearchCV for SVM
 pipeline_svm_cv = Pipeline([
     ('scaler', StandardScaler()),
