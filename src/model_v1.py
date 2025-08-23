@@ -116,8 +116,10 @@ param_grid_rf = {
     'n_estimators': [50, 100, 200, 300],
     'max_depth': [5, 10, 20, 30, None],
     'min_samples_split': [2, 5, 10, 20],
+    'min_samples_leaf': [1, 2, 4, 8],           # New
+    'max_features': ['sqrt', 'log2', None],      # New  
+    'bootstrap': [True, False]                   # New
 }
-
 
 pipeline_rf_cv = Pipeline([
     ('scaler', StandardScaler()),
