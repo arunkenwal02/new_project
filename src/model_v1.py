@@ -8,7 +8,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, classification_report
+from sklearn.metrics import accuracy_score, classification_report, precision_score
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from pprint import pprint
@@ -107,6 +107,16 @@ print("SVM Accuracy:", accuracy_svm)
 print("Logistic Regression Accuracy:", accuracy_lr)
 print("KNN Accuracy:", accuracy_knn)
 
+precision_rf = precision_score(y_test, y_pred_rf)
+precision_svm = precision_score(y_test, y_pred_svm)
+precision_lr = precision_score(y_test, y_pred_lr)
+precision_knn = precision_score(y_test, y_pred_knn)
+
+print("Random Forest Precision:", precision_rf)
+print("SVM Precision:", precision_svm)
+print("Logistic Regression Precision:", precision_lr)
+print("KNN Precision:", precision_knn)
+
 
 ######################## Hyperparameter Tuning ###########################
 #Through this code we will use `GridSearchCV` and will print Best parameters can get Higher Performance
@@ -170,3 +180,5 @@ print(best_params_svm)
 ############### Model Evaluation ####################
 classification_rep = classification_report(y_test, y_pred_rf_cv)
 print("Classification Report:\n", classification_rep)
+
+
