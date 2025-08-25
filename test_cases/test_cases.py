@@ -7,7 +7,7 @@ import pandas as pd
 df = pd.read_csv('/Users/arunkenwal/Desktop/new_project/model_resources/bankloan.csv')
 assert not df.empty, "DataFrame is empty after import"
 
-# Test Case 2: Column Name Replacement
+# Test Case 2: Column Name Replacement Validation
 # Description: Ensures that column names are correctly replaced with underscores instead of periods.
 # How to Perform:
 df.columns = [col.replace('.', '_') for col in df.columns]
@@ -20,7 +20,7 @@ expected_features = ["Exp_Gap", "Income_per_Family", "CC_Spend_Ratio", "Mortgage
                      "Income_Mortgage_Ratio", "Account_Score", "Digital_Score", 
                      "Income_Education", "Exp_Education", "CC_per_Family"]
 for feature in expected_features:
-    assert feature in df.columns, f"Feature {feature} not found in DataFrame"
+    assert feature in df.columns, f"{feature} not found in DataFrame"
 
 # Test Case 4: Train-Test Split Validation
 # Description: Ensures that the train-test split results in the correct number of samples.
@@ -87,7 +87,7 @@ pipeline_rf_cv = Pipeline([
 
 pipeline_rf_cv.fit(X_train, y_train)
 best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
-assert best_params_rf is not None, "Best parameters for RandomForestClassifier not found"
+assert best_params_rf is not None, "Best parameters not found for RandomForestClassifier"
 
 # Test Case 8: Model Evaluation Validation
 # Description: Ensures that the classification report is generated without errors.
