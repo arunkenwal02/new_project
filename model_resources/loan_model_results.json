@@ -1,0 +1,66 @@
+{
+    "metadata": {
+        "timestamp": "2025-08-25T12:33:24.333059",
+        "target_variable": "Personal_Loan",
+        "excluded_features": [
+            "ZIP_Code",
+            "Personal_Loan",
+            "ID"
+        ]
+    },
+    "features_used": [
+        "Age",
+        "Experience",
+        "Income",
+        "Family",
+        "CCAvg",
+        "Education",
+        "Mortgage",
+        "Securities_Account",
+        "CD_Account",
+        "Online",
+        "CreditCard",
+        "Exp_Gap",
+        "Income_per_Family",
+        "CC_Spend_Ratio",
+        "Mortgage_Income_Ratio",
+        "Income_Mortgage_Ratio",
+        "Account_Score",
+        "Digital_Score",
+        "Income_Education",
+        "Exp_Education",
+        "CC_per_Family"
+    ],
+    "preprocessing": {
+        "scaler": "StandardScaler",
+        "feature_engineering": [
+            "Exp_Gap = Age - Experience",
+            "Income_per_Family = Income / (Family, replace 0 with 2)",
+            "CC_Spend_Ratio = CCAvg / (Income+2)",
+            "Mortgage_Income_Ratio = Mortgage / (Income+2)",
+            "Income_Mortgage_Ratio = Income / (Mortgage+2)",
+            "Account_Score = Securities_Account + CD_Account",
+            "Digital_Score = Online + CreditCard",
+            "Income_Education = Income * Education",
+            "Exp_Education = Experience * Education",
+            "CC_per_Family = CCAvg / (Family, replace 0 with 1)"
+        ]
+    },
+    "model": "LogisticRegression",
+    "scores": {
+        "accuracy_train": 0.9665,
+        "accuracy_test": 0.968,
+        "precision_test": 0.9010989010989011
+    },
+    "hyperparameters": {
+        "best_params": {
+            "C": 1.0,
+            "class_weight": null,
+            "fit_intercept": true,
+            "max_iter": 100,
+            "penalty": "l1",
+            "solver": "liblinear"
+        }
+    },
+    "evaluation_metrics": "              precision    recall  f1-score   support\n\n           0       0.98      0.99      0.98       895\n           1       0.90      0.81      0.85       105\n\n    accuracy                           0.97      1000\n   macro avg       0.94      0.90      0.92      1000\nweighted avg       0.97      0.97      0.97      1000\n"
+}
