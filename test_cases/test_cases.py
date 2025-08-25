@@ -43,18 +43,29 @@ from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
 
-pipeline_rf = Pipeline([('scaler', StandardScaler()), ('classifier', RandomForestClassifier())])
-pipeline_svm = Pipeline([('scaler', StandardScaler()), ('classifier', SVC())])
-pipeline_lr = Pipeline([('scaler', StandardScaler()), ('classifier', LogisticRegression())])
-pipeline_knn = Pipeline([('scaler', StandardScaler()), ('classifier', KNeighborsClassifier())])
+pipeline_rf = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', RandomForestClassifier())
+])
+pipeline_rf.fit(X_train, y_train)
 
-try:
-    pipeline_rf.fit(X_train, y_train)
-    pipeline_svm.fit(X_train, y_train)
-    pipeline_lr.fit(X_train, y_train)
-    pipeline_knn.fit(X_train, y_train)
-except Exception as e:
-    assert False, f"Model training failed with error: {e}"
+pipeline_svm = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', SVC())
+])
+pipeline_svm.fit(X_train, y_train)
+
+pipeline_lr = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', LogisticRegression())
+])
+pipeline_lr.fit(X_train, y_train)
+
+pipeline_knn = Pipeline([
+    ('scaler', StandardScaler()),
+    ('classifier', KNeighborsClassifier())
+])
+pipeline_knn.fit(X_train, y_train)
 
 # Test Case 6: Prediction Validation
 # Description: Ensures that predictions are made without errors and have the correct length.
@@ -69,8 +80,23 @@ assert len(y_pred_svm) == len(y_test), "SVM predictions have incorrect length"
 assert len(y_pred_lr) == len(y_test), "Logistic Regression predictions have incorrect length"
 assert len(y_pred_knn) == len(y_test), "KNN predictions have incorrect length"
 
-# Test Case 7: Hyperparameter Tuning Validation
-# Description: Validates that hyperparameter tuning is performed and best parameters are found.
+# Test Case 7: Accuracy Calculation Validation
+# Description: Validates that accuracy scores are calculated and are within a reasonable range.
+# How to Perform:
+from sklearn.metrics import accuracy_score
+
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+accuracy_svm = accuracy_score(y_test, y_pred_svm)
+accuracy_lr = accuracy_score(y_test, y_pred_lr)
+accuracy_knn = accuracy_score(y_test, y_pred_knn)
+
+assert 0 <= accuracy_rf <= 1, "Random Forest accuracy is out of bounds"
+assert 0 <= accuracy_svm <= 1, "SVM accuracy is out of bounds"
+assert 0 <= accuracy_lr <= 1, "Logistic Regression accuracy is out of bounds"
+assert 0 <= accuracy_knn <= 1, "KNN accuracy is out of bounds"
+
+# Test Case 8: Hyperparameter Tuning Validation
+# Description: Ensures that GridSearchCV finds the best parameters without errors.
 # How to Perform:
 from sklearn.model_selection import GridSearchCV
 
@@ -84,16 +110,16 @@ pipeline_rf_cv = Pipeline([
     ('scaler', StandardScaler()),
     ('classifier', GridSearchCV(RandomForestClassifier(), param_grid_rf, cv=5))
 ])
-
 pipeline_rf_cv.fit(X_train, y_train)
-best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
-assert best_params_rf is not None, "Best parameters not found for RandomForestClassifier"
 
-# Test Case 8: Model Evaluation Validation
-# Description: Ensures that the classification report is generated without errors.
+best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
+assert best_params_rf is not None, "Best parameters for RandomForestClassifier not found"
+
+# Test Case 9: Classification Report Validation
+# Description: Validates that the classification report is generated without errors.
 # How to Perform:
 from sklearn.metrics import classification_report
 
-classification_rep = classification_report(y_test, y_pred_rf)
-assert classification_rep is not None, "Classification report generation failed"
+classification_rep = classification_report(y_test, y_pred_rf_cv)
+assert classification_rep is not None, "Classification report is not generated"
 ```
