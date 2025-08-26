@@ -13,7 +13,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import GridSearchCV
 
-class BankLoanModelTest(unittest.TestCase):
+class TestModelPipeline(unittest.TestCase):
     # setUpClass to fetch dataset
     @classmethod
     def setUpClass(cls):
@@ -26,28 +26,37 @@ class BankLoanModelTest(unittest.TestCase):
     def test_data_preprocessing(self):
         df = self.df.copy()
         df.columns = [col.replace('.', '_') for col in df.columns]
-        self.assertIn('Age', df.columns)
-        self.assertIn('Experience', df.columns)
-        self.assertIn('Income', df.columns)
-
-    # Test Case 2: Test feature engineering
-    # This test checks if the feature engineering steps are correctly applied.
-    def test_feature_engineering(self):
-        df = self.df.copy()
-        df["Exp_Gap"] = df["Age"] - df["Experience"]
-        df["Income_per_Family"] = np.round(df["Income"] / (df["Family"].replace(0, 2)), 4)
         self.assertIn('Exp_Gap', df.columns)
         self.assertIn('Income_per_Family', df.columns)
+        self.assertIn('CC_Spend_Ratio', df.columns)
+        self.assertIn('Mortgage_Income_Ratio', df.columns)
+        self.assertIn('Income_Mortgage_Ratio', df.columns)
+        self.assertIn('Account_Score', df.columns)
+        self.assertIn('Digital_Score', df.columns)
+        self.assertIn('Income_Education', df.columns)
+        self.assertIn('Exp_Education', df.columns)
+        self.assertIn('CC_per_Family', df.columns)
 
-    # Test Case 3: Test model training and prediction
-    # This test checks if the models are trained and make predictions without errors.
-    def test_model_training_and_prediction(self):
+    # Test Case 2: Test train-test split
+    # This test checks if the train-test split results in the correct sizes.
+    def test_train_test_split(self):
         df = self.df.copy()
-        df.columns = [col.replace('.', '_') for col in df.columns]
+        X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
+        y = df['Personal_Loan']
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        self.assertEqual(len(X_train), len(y_train))
+        self.assertEqual(len(X_test), len(y_test))
+        self.assertEqual(len(X_train) + len(X_test), len(df))
+
+    # Test Case 3: Test model accuracy
+    # This test checks if the models achieve a reasonable accuracy.
+    def test_model_accuracy(self):
+        df = self.df.copy()
         X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
         y = df['Personal_Loan']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+        # Random Forest
         pipeline_rf = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
@@ -55,17 +64,47 @@ class BankLoanModelTest(unittest.TestCase):
         pipeline_rf.fit(X_train, y_train)
         y_pred_rf = pipeline_rf.predict(X_test)
         accuracy_rf = accuracy_score(y_test, y_pred_rf)
-        self.assertTrue(0 <= accuracy_rf <= 1)
+        self.assertGreater(accuracy_rf, 0.7)  # Assuming a reasonable threshold
+
+        # SVM
+        pipeline_svm = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', SVC())
+        ])
+        pipeline_svm.fit(X_train, y_train)
+        y_pred_svm = pipeline_svm.predict(X_test)
+        accuracy_svm = accuracy_score(y_test, y_pred_svm)
+        self.assertGreater(accuracy_svm, 0.7)
+
+        # Logistic Regression
+        pipeline_lr = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', LogisticRegression())
+        ])
+        pipeline_lr.fit(X_train, y_train)
+        y_pred_lr = pipeline_lr.predict(X_test)
+        accuracy_lr = accuracy_score(y_test, y_pred_lr)
+        self.assertGreater(accuracy_lr, 0.7)
+
+        # KNN
+        pipeline_knn = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', KNeighborsClassifier())
+        ])
+        pipeline_knn.fit(X_train, y_train)
+        y_pred_knn = pipeline_knn.predict(X_test)
+        accuracy_knn = accuracy_score(y_test, y_pred_knn)
+        self.assertGreater(accuracy_knn, 0.7)
 
     # Test Case 4: Test hyperparameter tuning
-    # This test checks if the hyperparameter tuning process completes and returns best parameters.
+    # This test checks if the hyperparameter tuning process finds the best parameters.
     def test_hyperparameter_tuning(self):
         df = self.df.copy()
-        df.columns = [col.replace('.', '_') for col in df.columns]
         X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
         y = df['Personal_Loan']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+        # Random Forest with GridSearchCV
         param_grid_rf = {
             'n_estimators': [50, 100],
             'max_depth': [5, 10],
@@ -77,8 +116,9 @@ class BankLoanModelTest(unittest.TestCase):
         ])
         pipeline_rf_cv.fit(X_train, y_train)
         best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
-        self.assertIsInstance(best_params_rf, dict)
-        self.assertIn('n_estimators', best_params_rf)
+        self.assertIn(best_params_rf['n_estimators'], [50, 100])
+        self.assertIn(best_params_rf['max_depth'], [5, 10])
+        self.assertIn(best_params_rf['min_samples_split'], [2, 5])
 
 if __name__ == '__main__':
     unittest.main()
