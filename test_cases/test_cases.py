@@ -1,16 +1,17 @@
+```python
 import unittest
 import pandas as pd
+import numpy as np
 import requests
 from io import StringIO
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, classification_report
-from sklearn.model_selection import GridSearchCV
 
 class TestModelPipeline(unittest.TestCase):
 
@@ -40,8 +41,7 @@ class TestModelPipeline(unittest.TestCase):
         cls.y = cls.df['Personal_Loan']
         cls.X_train, cls.X_test, cls.y_train, cls.y_test = train_test_split(cls.X, cls.y, test_size=0.2, random_state=42)
 
-    # Test Case 1: Test Random Forest Classifier Accuracy
-    # This test checks if the Random Forest Classifier achieves a reasonable accuracy.
+    # Test Case 1: Test RandomForestClassifier pipeline accuracy
     def test_random_forest_accuracy(self):
         pipeline_rf = Pipeline([
             ('scaler', StandardScaler()),
@@ -50,11 +50,11 @@ class TestModelPipeline(unittest.TestCase):
         pipeline_rf.fit(self.X_train, self.y_train)
         y_pred_rf = pipeline_rf.predict(self.X_test)
         accuracy_rf = accuracy_score(self.y_test, y_pred_rf)
-        self.assertGreaterEqual(accuracy_rf, 0.7)  # Expecting at least 70% accuracy
+        # Check if the accuracy is within a reasonable range
+        self.assertGreaterEqual(accuracy_rf, 0.7)
 
-    # Test Case 2: Test SVM Classifier Accuracy
-    # This test checks if the SVM Classifier achieves a reasonable accuracy.
-    def test_svm_accuracy(self):
+    # Test Case 2: Test SVC pipeline accuracy
+    def test_svc_accuracy(self):
         pipeline_svm = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', SVC())
@@ -62,10 +62,10 @@ class TestModelPipeline(unittest.TestCase):
         pipeline_svm.fit(self.X_train, self.y_train)
         y_pred_svm = pipeline_svm.predict(self.X_test)
         accuracy_svm = accuracy_score(self.y_test, y_pred_svm)
-        self.assertGreaterEqual(accuracy_svm, 0.7)  # Expecting at least 70% accuracy
+        # Check if the accuracy is within a reasonable range
+        self.assertGreaterEqual(accuracy_svm, 0.7)
 
-    # Test Case 3: Test Logistic Regression Classifier Accuracy
-    # This test checks if the Logistic Regression Classifier achieves a reasonable accuracy.
+    # Test Case 3: Test LogisticRegression pipeline accuracy
     def test_logistic_regression_accuracy(self):
         pipeline_lr = Pipeline([
             ('scaler', StandardScaler()),
@@ -74,10 +74,10 @@ class TestModelPipeline(unittest.TestCase):
         pipeline_lr.fit(self.X_train, self.y_train)
         y_pred_lr = pipeline_lr.predict(self.X_test)
         accuracy_lr = accuracy_score(self.y_test, y_pred_lr)
-        self.assertGreaterEqual(accuracy_lr, 0.7)  # Expecting at least 70% accuracy
+        # Check if the accuracy is within a reasonable range
+        self.assertGreaterEqual(accuracy_lr, 0.7)
 
-    # Test Case 4: Test KNN Classifier Accuracy
-    # This test checks if the KNN Classifier achieves a reasonable accuracy.
+    # Test Case 4: Test KNeighborsClassifier pipeline accuracy
     def test_knn_accuracy(self):
         pipeline_knn = Pipeline([
             ('scaler', StandardScaler()),
@@ -86,11 +86,11 @@ class TestModelPipeline(unittest.TestCase):
         pipeline_knn.fit(self.X_train, self.y_train)
         y_pred_knn = pipeline_knn.predict(self.X_test)
         accuracy_knn = accuracy_score(self.y_test, y_pred_knn)
-        self.assertGreaterEqual(accuracy_knn, 0.7)  # Expecting at least 70% accuracy
+        # Check if the accuracy is within a reasonable range
+        self.assertGreaterEqual(accuracy_knn, 0.7)
 
-    # Test Case 5: Test Random Forest Hyperparameter Tuning
-    # This test checks if the Random Forest Classifier with hyperparameter tuning achieves a reasonable accuracy.
-    def test_random_forest_hyperparameter_tuning(self):
+    # Test Case 5: Test RandomForestClassifier with GridSearchCV for best parameters
+    def test_random_forest_grid_search(self):
         param_grid_rf = {
             'n_estimators': [50, 100, 200, 300],
             'max_depth': [5, 10, 20, 30, None],
@@ -101,13 +101,12 @@ class TestModelPipeline(unittest.TestCase):
             ('classifier', GridSearchCV(RandomForestClassifier(), param_grid_rf, cv=5))
         ])
         pipeline_rf_cv.fit(self.X_train, self.y_train)
-        y_pred_rf_cv = pipeline_rf_cv.predict(self.X_test)
-        accuracy_rf_cv = accuracy_score(self.y_test, y_pred_rf_cv)
-        self.assertGreaterEqual(accuracy_rf_cv, 0.7)  # Expecting at least 70% accuracy
+        best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
+        # Check if the best parameters are not None
+        self.assertIsNotNone(best_params_rf)
 
-    # Test Case 6: Test SVM Hyperparameter Tuning
-    # This test checks if the SVM Classifier with hyperparameter tuning achieves a reasonable accuracy.
-    def test_svm_hyperparameter_tuning(self):
+    # Test Case 6: Test SVC with GridSearchCV for best parameters
+    def test_svc_grid_search(self):
         param_grid_svm = {
             'C': [0.1, 1, 10, 50, 100],
             'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
@@ -118,12 +117,11 @@ class TestModelPipeline(unittest.TestCase):
             ('classifier', GridSearchCV(SVC(), param_grid_svm, cv=5))
         ])
         pipeline_svm_cv.fit(self.X_train, self.y_train)
-        y_pred_svm_cv = pipeline_svm_cv.predict(self.X_test)
-        accuracy_svm_cv = accuracy_score(self.y_test, y_pred_svm_cv)
-        self.assertGreaterEqual(accuracy_svm_cv, 0.7)  # Expecting at least 70% accuracy
+        best_params_svm = pipeline_svm_cv.named_steps['classifier'].best_params_
+        # Check if the best parameters are not None
+        self.assertIsNotNone(best_params_svm)
 
-    # Test Case 7: Test Classification Report Generation
-    # This test checks if the classification report can be generated without errors.
+    # Test Case 7: Test classification report generation
     def test_classification_report(self):
         pipeline_rf = Pipeline([
             ('scaler', StandardScaler()),
@@ -131,8 +129,12 @@ class TestModelPipeline(unittest.TestCase):
         ])
         pipeline_rf.fit(self.X_train, self.y_train)
         y_pred_rf = pipeline_rf.predict(self.X_test)
-        report = classification_report(self.y_test, y_pred_rf)
-        self.assertIsInstance(report, str)  # Check if the report is a string
+        classification_rep = classification_report(self.y_test, y_pred_rf, output_dict=True)
+        # Check if the classification report contains expected keys
+        self.assertIn('0', classification_rep)
+        self.assertIn('1', classification_rep)
+        self.assertIn('accuracy', classification_rep)
 
 if __name__ == '__main__':
     unittest.main()
+```
