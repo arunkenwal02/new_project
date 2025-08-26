@@ -35,7 +35,7 @@ class TestModelPipeline(unittest.TestCase):
         cls.y = cls.df['Personal_Loan']
         cls.X_train, cls.X_test, cls.y_train, cls.y_test = train_test_split(cls.X, cls.y, test_size=0.2, random_state=42)
 
-    # Test Case 1: Test RandomForestClassifier pipeline
+    # Test Case 1: Test Random Forest Pipeline
     def test_random_forest_pipeline(self):
         pipeline_rf = Pipeline([
             ('scaler', StandardScaler()),
@@ -44,10 +44,10 @@ class TestModelPipeline(unittest.TestCase):
         pipeline_rf.fit(self.X_train, self.y_train)
         y_pred_rf = pipeline_rf.predict(self.X_test)
         accuracy_rf = accuracy_score(self.y_test, y_pred_rf)
-        self.assertTrue(0 <= accuracy_rf <= 1, "Accuracy should be between 0 and 1")
+        self.assertTrue(0 <= accuracy_rf <= 1)
 
-    # Test Case 2: Test SVC pipeline
-    def test_svc_pipeline(self):
+    # Test Case 2: Test SVM Pipeline
+    def test_svm_pipeline(self):
         pipeline_svm = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', SVC())
@@ -55,9 +55,9 @@ class TestModelPipeline(unittest.TestCase):
         pipeline_svm.fit(self.X_train, self.y_train)
         y_pred_svm = pipeline_svm.predict(self.X_test)
         accuracy_svm = accuracy_score(self.y_test, y_pred_svm)
-        self.assertTrue(0 <= accuracy_svm <= 1, "Accuracy should be between 0 and 1")
+        self.assertTrue(0 <= accuracy_svm <= 1)
 
-    # Test Case 3: Test LogisticRegression pipeline
+    # Test Case 3: Test Logistic Regression Pipeline
     def test_logistic_regression_pipeline(self):
         pipeline_lr = Pipeline([
             ('scaler', StandardScaler()),
@@ -66,9 +66,9 @@ class TestModelPipeline(unittest.TestCase):
         pipeline_lr.fit(self.X_train, self.y_train)
         y_pred_lr = pipeline_lr.predict(self.X_test)
         accuracy_lr = accuracy_score(self.y_test, y_pred_lr)
-        self.assertTrue(0 <= accuracy_lr <= 1, "Accuracy should be between 0 and 1")
+        self.assertTrue(0 <= accuracy_lr <= 1)
 
-    # Test Case 4: Test KNeighborsClassifier pipeline
+    # Test Case 4: Test KNN Pipeline
     def test_knn_pipeline(self):
         pipeline_knn = Pipeline([
             ('scaler', StandardScaler()),
@@ -77,9 +77,9 @@ class TestModelPipeline(unittest.TestCase):
         pipeline_knn.fit(self.X_train, self.y_train)
         y_pred_knn = pipeline_knn.predict(self.X_test)
         accuracy_knn = accuracy_score(self.y_test, y_pred_knn)
-        self.assertTrue(0 <= accuracy_knn <= 1, "Accuracy should be between 0 and 1")
+        self.assertTrue(0 <= accuracy_knn <= 1)
 
-    # Test Case 5: Test RandomForestClassifier with GridSearchCV
+    # Test Case 5: Test Random Forest with GridSearchCV
     def test_random_forest_grid_search(self):
         param_grid_rf = {
             'n_estimators': [50, 100, 200, 300],
@@ -93,10 +93,10 @@ class TestModelPipeline(unittest.TestCase):
         pipeline_rf_cv.fit(self.X_train, self.y_train)
         y_pred_rf_cv = pipeline_rf_cv.predict(self.X_test)
         accuracy_rf_cv = accuracy_score(self.y_test, y_pred_rf_cv)
-        self.assertTrue(0 <= accuracy_rf_cv <= 1, "Accuracy should be between 0 and 1")
+        self.assertTrue(0 <= accuracy_rf_cv <= 1)
 
-    # Test Case 6: Test SVC with GridSearchCV
-    def test_svc_grid_search(self):
+    # Test Case 6: Test SVM with GridSearchCV
+    def test_svm_grid_search(self):
         param_grid_svm = {
             'C': [0.1, 1, 10, 50, 100],
             'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],
@@ -109,7 +109,7 @@ class TestModelPipeline(unittest.TestCase):
         pipeline_svm_cv.fit(self.X_train, self.y_train)
         y_pred_svm_cv = pipeline_svm_cv.predict(self.X_test)
         accuracy_svm_cv = accuracy_score(self.y_test, y_pred_svm_cv)
-        self.assertTrue(0 <= accuracy_svm_cv <= 1, "Accuracy should be between 0 and 1")
+        self.assertTrue(0 <= accuracy_svm_cv <= 1)
 
 if __name__ == '__main__':
     unittest.main()
