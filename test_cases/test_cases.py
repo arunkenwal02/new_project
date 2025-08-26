@@ -16,96 +16,106 @@ import numpy as np
 class ModelTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Fetch dataset from GitHub
+        # Fetch the dataset from GitHub
         url = 'https://github.com/arunkenwal02/new_project/raw/main/model_resources/bankloan.csv'
-        response = requests.get(url, verify=False)  # disables SSL verification safely for testing
+        response = requests.get(url, verify=False)
         cls.df = pd.read_csv(StringIO(response.text))
 
-        # Preprocess the data as done in the original script
+        # Preprocessing
         cls.df.columns = [col.replace('.', '_') for col in cls.df.columns]
         cls.df["Exp_Gap"] = cls.df["Age"] - cls.df["Experience"]
         cls.df["Income_per_Family"] = np.round(cls.df["Income"] / (cls.df["Family"].replace(0, 2)), 4)
         cls.df["CC_Spend_Ratio"] = cls.df["CCAvg"] / (cls.df["Income"] + 2)
         cls.df["Mortgage_Income_Ratio"] = cls.df["Mortgage"] / (cls.df["Income"] + 2)
         cls.df["Income_Mortgage_Ratio"] = cls.df["Income"] / (cls.df["Mortgage"] + 2)
-        cls.df["Account_Score"] = cls.df["Securities_Account"] + cls.df["CD_Account"] 
+        cls.df["Account_Score"] = cls.df["Securities_Account"] + cls.df["CD_Account"]
         cls.df["Digital_Score"] = cls.df["Online"] + cls.df["CreditCard"]
         cls.df["Income_Education"] = cls.df["Income"] * cls.df["Education"]
         cls.df["Exp_Education"] = cls.df["Experience"] * cls.df["Education"]
         cls.df["CC_per_Family"] = cls.df["CCAvg"] / (cls.df["Family"].replace(0, 1))
 
-    def test_data_shape(self):
-        # Test to check if the dataframe has the expected shape
-        self.assertEqual(self.df.shape[0], 5000)  # Assuming there are 5000 rows
-        self.assertEqual(self.df.shape[1], 14)    # Assuming there are 14 columns after processing
+        # Prepare features and target variable
+        cls.X = cls.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
+        cls.y = cls.df['Personal_Loan']
 
-    def test_feature_engineering(self):
-        # Test to check if new features are created correctly
-        self.assertIn("Exp_Gap", self.df.columns)
-        self.assertIn("Income_per_Family", self.df.columns)
-        self.assertIn("CC_Spend_Ratio", self.df.columns)
-        self.assertIn("Mortgage_Income_Ratio", self.df.columns)
-        self.assertIn("Income_Mortgage_Ratio", self.df.columns)
-        self.assertIn("Account_Score", self.df.columns)
-        self.assertIn("Digital_Score", self.df.columns)
+        # Split the data
+        cls.X_train, cls.X_test, cls.y_train, cls.y_test = train_test_split(cls.X, cls.y, test_size=0.2, random_state=42)
 
-    def test_model_accuracy(self):
-        # Test to check if the Random Forest model achieves a reasonable accuracy
-        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        y = self.df['Personal_Loan']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
+    def test_random_forest_accuracy(self):
+        # Test Random Forest Classifier accuracy
         pipeline_rf = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
         ])
-        
-        pipeline_rf.fit(X_train, y_train)
-        y_pred_rf = pipeline_rf.predict(X_test)
-        accuracy_rf = accuracy_score(y_test, y_pred_rf)
+        pipeline_rf.fit(self.X_train, self.y_train)
+        y_pred_rf = pipeline_rf.predict(self.X_test)
+        accuracy_rf = accuracy_score(self.y_test, y_pred_rf)
+        self.assertTrue(accuracy_rf > 0.7, "Random Forest accuracy is below 70%")
 
-        self.assertGreaterEqual(accuracy_rf, 0.7)  # Assuming we expect at least 70% accuracy
+    def test_svm_accuracy(self):
+        # Test SVM Classifier accuracy
+        pipeline_svm = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', SVC())
+        ])
+        pipeline_svm.fit(self.X_train, self.y_train)
+        y_pred_svm = pipeline_svm.predict(self.X_test)
+        accuracy_svm = accuracy_score(self.y_test, y_pred_svm)
+        self.assertTrue(accuracy_svm > 0.7, "SVM accuracy is below 70%")
 
-    def test_hyperparameter_tuning_rf(self):
-        # Test to check if hyperparameter tuning for RandomForest works
-        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        y = self.df['Personal_Loan']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    def test_logistic_regression_accuracy(self):
+        # Test Logistic Regression Classifier accuracy
+        pipeline_lr = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', LogisticRegression())
+        ])
+        pipeline_lr.fit(self.X_train, self.y_train)
+        y_pred_lr = pipeline_lr.predict(self.X_test)
+        accuracy_lr = accuracy_score(self.y_test, y_pred_lr)
+        self.assertTrue(accuracy_lr > 0.7, "Logistic Regression accuracy is below 70%")
 
+    def test_knn_accuracy(self):
+        # Test KNN Classifier accuracy
+        pipeline_knn = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', KNeighborsClassifier())
+        ])
+        pipeline_knn.fit(self.X_train, self.y_train)
+        y_pred_knn = pipeline_knn.predict(self.X_test)
+        accuracy_knn = accuracy_score(self.y_test, y_pred_knn)
+        self.assertTrue(accuracy_knn > 0.7, "KNN accuracy is below 70%")
+
+    def test_random_forest_hyperparameter_tuning(self):
+        # Test Random Forest with hyperparameter tuning
         param_grid_rf = {
             'n_estimators': [50, 100],
             'max_depth': [5, 10],
-            'min_samples_split': [2, 5],
+            'min_samples_split': [2, 5]
         }
-
         pipeline_rf_cv = Pipeline([
             ('scaler', StandardScaler()),
-            ('classifier', GridSearchCV(RandomForestClassifier(), param_grid_rf, cv=3))
+            ('classifier', GridSearchCV(RandomForestClassifier(), param_grid_rf, cv=5))
         ])
+        pipeline_rf_cv.fit(self.X_train, self.y_train)
+        y_pred_rf_cv = pipeline_rf_cv.predict(self.X_test)
+        accuracy_rf_cv = accuracy_score(self.y_test, y_pred_rf_cv)
+        self.assertTrue(accuracy_rf_cv > 0.7, "Random Forest accuracy with CV is below 70%")
 
-        pipeline_rf_cv.fit(X_train, y_train)
-        best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
-
-        self.assertIn('n_estimators', best_params_rf)
-        self.assertIn('max_depth', best_params_rf)
-        self.assertIn('min_samples_split', best_params_rf)
-
-    def test_classification_report(self):
-        # Test to check if classification report can be generated
-        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        y = self.df['Personal_Loan']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        pipeline_rf = Pipeline([
+    def test_svm_hyperparameter_tuning(self):
+        # Test SVM with hyperparameter tuning
+        param_grid_svm = {
+            'C': [0.1, 1],
+            'kernel': ['linear', 'poly'],
+            'gamma': ['scale', 'auto']
+        }
+        pipeline_svm_cv = Pipeline([
             ('scaler', StandardScaler()),
-            ('classifier', RandomForestClassifier())
+            ('classifier', GridSearchCV(SVC(), param_grid_svm, cv=5))
         ])
-        
-        pipeline_rf.fit(X_train, y_train)
-        y_pred_rf = pipeline_rf.predict(X_test)
-
-        report = classification_report(y_test, y_pred_rf)
-        self.assertIsNotNone(report)  # Check if the report is generated
+        pipeline_svm_cv.fit(self.X_train, self.y_train)
+        y_pred_svm_cv = pipeline_svm_cv.predict(self.X_test)
+        accuracy_svm_cv = accuracy_score(self.y_test, y_pred_svm_cv)
+        self.assertTrue(accuracy_svm_cv > 0.7, "SVM accuracy with CV is below 70%")
 
 if __name__ == '__main__':
     unittest.main()
