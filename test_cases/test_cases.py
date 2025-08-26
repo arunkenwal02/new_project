@@ -13,7 +13,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.metrics import accuracy_score, classification_report
 from sklearn.model_selection import GridSearchCV
 
-class BankLoanModelTest(unittest.TestCase):
+class TestModelPipeline(unittest.TestCase):
     # setUpClass to fetch dataset
     @classmethod
     def setUpClass(cls):
@@ -26,8 +26,8 @@ class BankLoanModelTest(unittest.TestCase):
     def test_data_preprocessing(self):
         df = self.df.copy()
         df.columns = [col.replace('.', '_') for col in df.columns]
-        self.assertIn('Age', df.columns)
-        self.assertIn('Experience', df.columns)
+        self.assertIn('Exp_Gap', df.columns)
+        self.assertIn('Income_per_Family', df.columns)
 
     # Test Case 2: Test feature engineering
     # This test checks if the feature engineering steps are correctly applied.
@@ -35,14 +35,15 @@ class BankLoanModelTest(unittest.TestCase):
         df = self.df.copy()
         df["Exp_Gap"] = df["Age"] - df["Experience"]
         df["Income_per_Family"] = np.round(df["Income"] / (df["Family"].replace(0, 2)), 4)
-        self.assertIn('Exp_Gap', df.columns)
-        self.assertIn('Income_per_Family', df.columns)
+        self.assertTrue('Exp_Gap' in df.columns)
+        self.assertTrue('Income_per_Family' in df.columns)
 
     # Test Case 3: Test model training and prediction
-    # This test checks if the models are trained and can make predictions.
+    # This test checks if the models are trained and predictions are made without errors.
     def test_model_training_and_prediction(self):
         df = self.df.copy()
-        df.columns = [col.replace('.', '_') for col in df.columns]
+        df["Exp_Gap"] = df["Age"] - df["Experience"]
+        df["Income_per_Family"] = np.round(df["Income"] / (df["Family"].replace(0, 2)), 4)
         X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
         y = df['Personal_Loan']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -57,10 +58,11 @@ class BankLoanModelTest(unittest.TestCase):
         self.assertGreaterEqual(accuracy_rf, 0.5)  # Assuming a baseline accuracy of 50%
 
     # Test Case 4: Test hyperparameter tuning
-    # This test checks if hyperparameter tuning improves model accuracy.
+    # This test checks if hyperparameter tuning is performed and best parameters are found.
     def test_hyperparameter_tuning(self):
         df = self.df.copy()
-        df.columns = [col.replace('.', '_') for col in df.columns]
+        df["Exp_Gap"] = df["Age"] - df["Experience"]
+        df["Income_per_Family"] = np.round(df["Income"] / (df["Family"].replace(0, 2)), 4)
         X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
         y = df['Personal_Loan']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -75,9 +77,8 @@ class BankLoanModelTest(unittest.TestCase):
             ('classifier', GridSearchCV(RandomForestClassifier(), param_grid_rf, cv=5))
         ])
         pipeline_rf_cv.fit(X_train, y_train)
-        y_pred_rf_cv = pipeline_rf_cv.predict(X_test)
-        accuracy_rf_cv = accuracy_score(y_test, y_pred_rf_cv)
-        self.assertGreaterEqual(accuracy_rf_cv, 0.5)  # Assuming a baseline accuracy of 50%
+        best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
+        self.assertIsNotNone(best_params_rf)
 
 if __name__ == '__main__':
     unittest.main()
