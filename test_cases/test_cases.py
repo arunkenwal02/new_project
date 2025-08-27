@@ -64,7 +64,7 @@ class ModelTestCase(unittest.TestCase):
         pipeline_rf.fit(X_train, y_train)
         y_pred_rf = pipeline_rf.predict(X_test)
         accuracy_rf = accuracy_score(y_test, y_pred_rf)
-        self.assertGreater(accuracy_rf, 0.7)  # Assuming a threshold of 0.7 for the test
+        self.assertGreater(accuracy_rf, 0.7)  # Assuming a threshold of 0.7 for this test
 
 if __name__ == '__main__':
     unittest.main()
