@@ -22,7 +22,7 @@ class ModelTestCase(unittest.TestCase):
     # Test Case 1: Test data loading
     # This test checks if the data is loaded correctly and has the expected number of columns.
     def test_data_loading(self):
-        expected_columns = 13  # Assuming the dataset has 13 columns
+        expected_columns = 14  # Assuming the dataset has 14 columns
         self.assertEqual(self.df.shape[1], expected_columns)
 
     # Test Case 2: Test feature engineering
