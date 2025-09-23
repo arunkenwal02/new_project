@@ -12,8 +12,11 @@ from sklearn.metrics import accuracy_score, classification_report, precision_sco
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from pprint import pprint
+from datetime import datetime
+import json
 
-df = pd.read_csv('/Users/arunkenwal/Desktop/new_project/model_resources/bankloan.csv')
+
+df = pd.read_csv('../model_resources/bankloan.csv')
 # pprint(df.head(10))
 
 # print(df.info())
@@ -23,7 +26,6 @@ df = pd.read_csv('/Users/arunkenwal/Desktop/new_project/model_resources/bankloan
 # pprint(df.shape)
 
 ####### Let's Check Outliers in our Columns ############
-
 numerical_columns = df.select_dtypes(include=['number'])
 
 
@@ -38,10 +40,10 @@ plt.show()
 
 ############### Data Preprocessing #########################
 
+# Features name
 df.columns = [col.replace('.', '_') for col in df.columns]
 
 ############## Feature Engineering #########################
-
 df["Exp_Gap"] = df["Age"] - df["Experience"]
 df["Income_per_Family"] = np.round(df["Income"] / (df["Family"].replace(0, 2)), 4)
 df["CC_Spend_Ratio"] = df["CCAvg"] / (df["Income"] + 2)
@@ -55,130 +57,124 @@ df["CC_per_Family"] = df["CCAvg"] / (df["Family"].replace(0, 1))
 
 # pprint(df)
 
-################# Baseline Model ########################
 
 # assuming 'ZIP_Code' and 'Personal_Loan' are columns in the dataFrame
 X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)  
 y = df['Personal_Loan']  # target variable
 
+# Train test split 
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# pipeline with different classifiers
-pipeline_rf = Pipeline([
-    ('scaler', StandardScaler()),
-    ('classifier', RandomForestClassifier())
-])
 
-pipeline_svm = Pipeline([
-    ('scaler', StandardScaler()),
-    ('classifier', SVC())
-])
-
+# Create pipeline to train model
 pipeline_lr = Pipeline([
     ('scaler', StandardScaler()),
     ('classifier', LogisticRegression())
 ])
 
-pipeline_knn = Pipeline([
-    ('scaler', StandardScaler()),
-    ('classifier', KNeighborsClassifier())
-])
 
-# fitting the pipelines
-pipeline_rf.fit(X_train, y_train)
-pipeline_svm.fit(X_train, y_train)
+# Fit logistic regression
 pipeline_lr.fit(X_train, y_train)
-pipeline_knn.fit(X_train, y_train)
+# pipeline_knn.fit(X_train, y_train)
 
 # predictions
-y_pred_rf = pipeline_rf.predict(X_test)
-y_pred_svm = pipeline_svm.predict(X_test)
+
 y_pred_lr = pipeline_lr.predict(X_test)
-y_pred_knn = pipeline_knn.predict(X_test)
+
 
 # performance
-accuracy_rf = accuracy_score(y_test, y_pred_rf)
-accuracy_svm = accuracy_score(y_test, y_pred_svm)
+
 accuracy_lr = accuracy_score(y_test, y_pred_lr)
-accuracy_knn = accuracy_score(y_test, y_pred_knn)
 
-print("Random Forest Accuracy:", accuracy_rf)
-print("SVM Accuracy:", accuracy_svm)
+
 print("Logistic Regression Accuracy:", accuracy_lr)
-print("KNN Accuracy:", accuracy_knn)
 
-precision_rf = precision_score(y_test, y_pred_rf)
-precision_svm = precision_score(y_test, y_pred_svm)
+
 precision_lr = precision_score(y_test, y_pred_lr)
-precision_knn = precision_score(y_test, y_pred_knn)
-
-print("Random Forest Precision:", precision_rf)
-print("SVM Precision:", precision_svm)
 print("Logistic Regression Precision:", precision_lr)
-print("KNN Precision:", precision_knn)
+# print("KNN Precision:", precision_knn)
 
 
 ######################## Hyperparameter Tuning ###########################
 #Through this code we will use `GridSearchCV` and will print Best parameters can get Higher Performance
 
 # hyperparameter grids for RandomForestClassifier
-param_grid_rf = {
-    'n_estimators': [50, 100, 200, 300],
-    'max_depth': [5, 10, 20, 30, None],
-    'min_samples_split': [2, 5, 10, 20],
-    'min_samples_leaf': [1, 2, 4, 8],           # New
-    'max_features': ['sqrt', 'log2', None],      # New  
-    'bootstrap': [True, False]                   # New
+param_grid_lrg = {
+    'penalty': ['l1', 'l2', 'elasticnet', None],   # Regularization type
+    'C': [0.01, 0.1, 1.0, 10, 100],                # Inverse of regularization strength
+    'solver': ['liblinear', 'saga', 'lbfgs'],      # Optimizers (note: not all support l1/elasticnet)
+    'class_weight': [None, 'balanced'],            # Handle imbalance
+    'fit_intercept': [True, False],                # Whether to fit intercept
+    'max_iter': [100, 200, 500]                    # Iterations for convergence
 }
 
-pipeline_rf_cv = Pipeline([
+pipeline_lrg_cv = Pipeline([
     ('scaler', StandardScaler()),
-    ('classifier', GridSearchCV(RandomForestClassifier(), param_grid_rf, cv=5))
+    ('classifier', GridSearchCV(LogisticRegression(), param_grid_lrg, cv=5))
 ])
 
 # cross-validation and hyperparameter tuning
-pipeline_rf_cv.fit(X_train, y_train)
+pipeline_lrg_cv.fit(X_train, y_train)
+
+best_params_lr = pipeline_lrg_cv.named_steps['classifier'].best_params_
 
 # best hyperparameters and predictions
-y_pred_rf_cv = pipeline_rf_cv.predict(X_test)
+y_pred_rf_cv = pipeline_lrg_cv.predict(X_test)
 
 
 accuracy_rf_cv = accuracy_score(y_test, y_pred_rf_cv)
 print("Random Forest Accuracy (with CV):", accuracy_rf_cv)
 
 
-best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
+best_params_rf = pipeline_lrg_cv.named_steps['classifier'].best_params_
 print("\nBest Hyperparameters for RandomForestClassifier:")
 print(best_params_rf)
-
-param_grid_svm = {
-    'C': [0.1, 1, 10, 50, 100],             # Regularization strength
-    'kernel': ['linear', 'poly', 'rbf', 'sigmoid'],  # Different kernel types
-    'gamma': ['scale', 'auto', 0.01, 0.001] # Kernel coefficient options
-}
-# Pipeline with scaler + GridSearchCV for SVM
-pipeline_svm_cv = Pipeline([
-    ('scaler', StandardScaler()),
-    ('classifier', GridSearchCV(SVC(), param_grid_svm, cv=5))
-])
-
-pipeline_svm_cv.fit(X_train, y_train)
-
-# best hyperparameters and predictions
-y_pred_svm_cv = pipeline_svm_cv.predict(X_test)
-
-
-accuracy_svm_cv = accuracy_score(y_test, y_pred_svm_cv)
-print("Random Forest Accuracy (with CV):", accuracy_svm_cv)
-
-
-best_params_svm = pipeline_svm_cv.named_steps['classifier'].best_params_
-print("\nBest Hyperparameters for SVM:")
-print(best_params_svm)
 
 
 ############### Model Evaluation ####################
 classification_rep = classification_report(y_test, y_pred_rf_cv)
 print("Classification Report:\n", classification_rep)
+
+
+# ---------------- Store Results in JSON ---------------- #
+results = {
+    "metadata": {
+        "timestamp": datetime.now().isoformat(),
+        "target_variable": "Personal_Loan",
+        "excluded_features": ["ZIP_Code", "Personal_Loan", "ID"]
+    },
+    "features_used": list(X.columns),
+    "preprocessing": {
+        "scaler": "StandardScaler",
+        "feature_engineering": [
+            "Exp_Gap = Age - Experience",
+            "Income_per_Family = Income / (Family, replace 0 with 2)",
+            "CC_Spend_Ratio = CCAvg / (Income+2)",
+            "Mortgage_Income_Ratio = Mortgage / (Income+2)",
+            "Income_Mortgage_Ratio = Income / (Mortgage+2)",
+            "Account_Score = Securities_Account + CD_Account",
+            "Digital_Score = Online + CreditCard",
+            "Income_Education = Income * Education",
+            "Exp_Education = Experience * Education",
+            "CC_per_Family = CCAvg / (Family, replace 0 with 1)"
+        ]
+    },
+    "model": "LogisticRegression",
+    "scores": {
+        "accuracy_train": pipeline_lr.score(X_train, y_train),
+        "accuracy_test": accuracy_lr,
+        "precision_test": precision_lr
+    },
+    "hyperparameters": {
+        "best_params": best_params_lr
+    },
+    "evaluation_metrics": classification_rep
+}
+
+# Save results to JSON
+with open("../model_resources/loan_model_results.json", "w") as f:
+    json.dump(results, f, indent=4)
+
+print("\nResults saved to loan_model_results.json")
 
 

@@ -2,3 +2,4 @@ venv/
 .env
 __pycache__/
 code_validator/
+.DS_Store
