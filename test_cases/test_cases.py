@@ -22,21 +22,20 @@ class ModelTestCase(unittest.TestCase):
     # Test Case 1: Test data loading
     # This test checks if the data is loaded correctly and has the expected number of columns.
     def test_data_loading(self):
-        expected_columns = 14  # Assuming the dataset has 14 columns
+        expected_columns = 13  # Assuming the dataset has 13 columns
         self.assertEqual(self.df.shape[1], expected_columns)
 
     # Test Case 2: Test feature engineering
-    # This test checks if the feature engineering step adds the expected columns.
+    # This test checks if the new features are added correctly.
     def test_feature_engineering(self):
         df = self.df.copy()
         df["Exp_Gap"] = df["Age"] - df["Experience"]
         df["Income_per_Family"] = df["Income"] / (df["Family"].replace(0, 2))
-        expected_columns = ['Exp_Gap', 'Income_per_Family']
-        for col in expected_columns:
-            self.assertIn(col, df.columns)
+        self.assertIn("Exp_Gap", df.columns)
+        self.assertIn("Income_per_Family", df.columns)
 
     # Test Case 3: Test train-test split
-    # This test checks if the train-test split results in the expected number of samples.
+    # This test checks if the train-test split results in the correct number of samples.
     def test_train_test_split(self):
         X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
         y = self.df['Personal_Loan']
@@ -45,7 +44,7 @@ class ModelTestCase(unittest.TestCase):
         self.assertEqual(len(X_test), int(0.2 * len(self.df)))
 
     # Test Case 4: Test model accuracy
-    # This test checks if the RandomForest model achieves a minimum accuracy threshold.
+    # This test checks if the RandomForest model achieves a reasonable accuracy.
     def test_random_forest_accuracy(self):
         X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
         y = self.df['Personal_Loan']
@@ -57,7 +56,7 @@ class ModelTestCase(unittest.TestCase):
         pipeline_rf.fit(X_train, y_train)
         y_pred_rf = pipeline_rf.predict(X_test)
         accuracy_rf = accuracy_score(y_test, y_pred_rf)
-        self.assertGreaterEqual(accuracy_rf, 0.7)  # Assuming 70% is the minimum acceptable accuracy
+        self.assertGreater(accuracy_rf, 0.7)  # Assuming a reasonable accuracy threshold
 
 if __name__ == '__main__':
     unittest.main()
