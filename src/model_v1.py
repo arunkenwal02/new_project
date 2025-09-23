@@ -62,7 +62,7 @@ X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_
 # Create pipeline to train model
 pipeline_lr = Pipeline([
     ('scaler', StandardScaler()),
-    ('classifier', LogisticRegression())
+    ('classifier', RandomForestClassifier())
 ])
 
 # Define hyperparameter grid according to whitepaper
