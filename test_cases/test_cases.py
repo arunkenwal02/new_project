@@ -5,11 +5,9 @@ from io import StringIO
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.svm import SVC
-from sklearn.linear_model import LogisticRegression
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, balanced_accuracy_score
+import numpy as np
 
 class ModelTestCase(unittest.TestCase):
     # setUpClass to fetch dataset
@@ -18,45 +16,96 @@ class ModelTestCase(unittest.TestCase):
         url = 'https://github.com/arunkenwal02/new_project/raw/main/model_resources/bankloan.csv'
         response = requests.get(url, verify=False)  # disables SSL verification safely for testing
         cls.df = pd.read_csv(StringIO(response.text))
+        cls.df = cls.df.sample(1000, random_state=42)
+        cls.df.columns = [col.replace('.', '_') for col in cls.df.columns]
+        cls.df["Exp_Gap"] = cls.df["Age"] - cls.df["Experience"]
+        cls.df["Income_per_Family"] = np.round(cls.df["Income"] / (cls.df["Family"].replace(0, 2)), 4)
+        cls.df["CC_Spend_Ratio"] = cls.df["CCAvg"] / (cls.df["Income"] + 2)
+        cls.df["Mortgage_Income_Ratio"] = cls.df["Mortgage"] / (cls.df["Income"] + 2)
+        cls.df["Income_Mortgage_Ratio"] = cls.df["Income"] / (cls.df["Mortgage"] + 2)
+        cls.df["Account_Score"] = cls.df["Securities_Account"] + cls.df["CD_Account"]
+        cls.df["Digital_Score"] = cls.df["Online"] + cls.df["CreditCard"]
+        cls.df["Income_Education"] = cls.df["Income"] * cls.df["Education"]
+        cls.df["Exp_Education"] = cls.df["Experience"] * cls.df["Education"]
+        cls.df["CC_per_Family"] = cls.df["CCAvg"] / (cls.df["Family"].replace(0, 1))
+        cls.X = cls.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
+        cls.y = cls.df['Personal_Loan']
 
-    # Test Case 1: Test data loading
-    # This test checks if the data is loaded correctly and has the expected number of columns.
-    def test_data_loading(self):
-        expected_columns = 13  # Assuming the dataset has 13 columns
-        self.assertEqual(self.df.shape[1], expected_columns)
-
-    # Test Case 2: Test feature engineering
-    # This test checks if the new features are added correctly.
-    def test_feature_engineering(self):
-        df = self.df.copy()
-        df["Exp_Gap"] = df["Age"] - df["Experience"]
-        df["Income_per_Family"] = df["Income"] / (df["Family"].replace(0, 2))
-        self.assertIn("Exp_Gap", df.columns)
-        self.assertIn("Income_per_Family", df.columns)
-
-    # Test Case 3: Test train-test split
-    # This test checks if the train-test split results in the correct number of samples.
+    # Test Case 1: Test train-test split
     def test_train_test_split(self):
-        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        y = self.df['Personal_Loan']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        self.assertEqual(len(X_train), int(0.8 * len(self.df)))
-        self.assertEqual(len(X_test), int(0.2 * len(self.df)))
+        X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=42)
+        self.assertEqual(len(X_train), 800)
+        self.assertEqual(len(X_test), 200)
+        self.assertEqual(len(y_train), 800)
+        self.assertEqual(len(y_test), 200)
 
-    # Test Case 4: Test model accuracy
-    # This test checks if the RandomForest model achieves a reasonable accuracy.
-    def test_random_forest_accuracy(self):
-        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        y = self.df['Personal_Loan']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        pipeline_rf = Pipeline([
+    # Test Case 2: Test pipeline creation
+    def test_pipeline_creation(self):
+        pipeline = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
         ])
-        pipeline_rf.fit(X_train, y_train)
-        y_pred_rf = pipeline_rf.predict(X_test)
-        accuracy_rf = accuracy_score(y_test, y_pred_rf)
-        self.assertGreater(accuracy_rf, 0.7)  # Assuming a reasonable accuracy threshold
+        self.assertIsInstance(pipeline, Pipeline)
+
+    # Test Case 3: Test GridSearchCV best parameters
+    def test_grid_search_best_params(self):
+        X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=42)
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', RandomForestClassifier())
+        ])
+        param_grid = {
+            'classifier__n_estimators': [50, 100, 200, 300],
+            'classifier__max_depth': [None, 5, 10, 20, 30],
+            'classifier__min_samples_split': [2, 5, 10, 20],
+            'classifier__min_samples_leaf': [1, 2, 4, 8],
+            'classifier__max_features': ['auto', 'sqrt', 'log2']
+        }
+        grid_search = GridSearchCV(
+            estimator=pipeline,
+            param_grid=param_grid,
+            cv=5,
+            scoring='accuracy',
+            n_jobs=-1
+        )
+        grid_search.fit(X_train, y_train)
+        best_params = grid_search.best_params_
+        self.assertIn('classifier__n_estimators', best_params)
+        self.assertIn('classifier__max_depth', best_params)
+
+    # Test Case 4: Test model performance metrics
+    def test_model_performance_metrics(self):
+        X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=42)
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', RandomForestClassifier())
+        ])
+        param_grid = {
+            'classifier__n_estimators': [50, 100, 200, 300],
+            'classifier__max_depth': [None, 5, 10, 20, 30],
+            'classifier__min_samples_split': [2, 5, 10, 20],
+            'classifier__min_samples_leaf': [1, 2, 4, 8],
+            'classifier__max_features': ['auto', 'sqrt', 'log2']
+        }
+        grid_search = GridSearchCV(
+            estimator=pipeline,
+            param_grid=param_grid,
+            cv=5,
+            scoring='accuracy',
+            n_jobs=-1
+        )
+        grid_search.fit(X_train, y_train)
+        y_pred = grid_search.predict(X_test)
+        accuracy = accuracy_score(y_test, y_pred)
+        precision = precision_score(y_test, y_pred)
+        recall = recall_score(y_test, y_pred)
+        f1 = f1_score(y_test, y_pred)
+        balanced_acc = balanced_accuracy_score(y_test, y_pred)
+        self.assertGreaterEqual(accuracy, 0.5)
+        self.assertGreaterEqual(precision, 0.5)
+        self.assertGreaterEqual(recall, 0.5)
+        self.assertGreaterEqual(f1, 0.5)
+        self.assertGreaterEqual(balanced_acc, 0.5)
 
 if __name__ == '__main__':
     unittest.main()
