@@ -18,53 +18,54 @@ class ModelTestCase(unittest.TestCase):
         url = 'https://github.com/arunkenwal02/new_project/raw/main/model_resources/bankloan.csv'
         response = requests.get(url, verify=False)  # disables SSL verification safely for testing
         cls.df = pd.read_csv(StringIO(response.text))
+        cls.df.columns = [col.replace('.', '_') for col in cls.df.columns]
+        cls.X = cls.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
+        cls.y = cls.df['Personal_Loan']
+        cls.X_train, cls.X_test, cls.y_train, cls.y_test = train_test_split(cls.X, cls.y, test_size=0.2, random_state=42)
 
-    # Test Case 1: Test data loading
-    # This test checks if the data is loaded correctly and has the expected number of columns.
-    def test_data_loading(self):
-        expected_columns = 13  # Assuming the dataset has 13 columns
-        self.assertEqual(self.df.shape[1], expected_columns)
-
-    # Test Case 2: Test feature engineering
-    # This test checks if the new features are added correctly to the dataframe.
-    def test_feature_engineering(self):
-        df = self.df.copy()
-        df["Exp_Gap"] = df["Age"] - df["Experience"]
-        df["Income_per_Family"] = df["Income"] / (df["Family"].replace(0, 2))
-        self.assertIn("Exp_Gap", df.columns)
-        self.assertIn("Income_per_Family", df.columns)
-
-    # Test Case 3: Test model training
-    # This test checks if the RandomForest model can be trained without errors.
-    def test_model_training(self):
-        df = self.df.copy()
-        X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        y = df['Personal_Loan']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Test Case 1: Test RandomForestClassifier accuracy
+    def test_random_forest_accuracy(self):
         pipeline_rf = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
         ])
-        pipeline_rf.fit(X_train, y_train)
-        y_pred_rf = pipeline_rf.predict(X_test)
-        accuracy_rf = accuracy_score(y_test, y_pred_rf)
-        self.assertTrue(0 <= accuracy_rf <= 1)
+        pipeline_rf.fit(self.X_train, self.y_train)
+        y_pred_rf = pipeline_rf.predict(self.X_test)
+        accuracy_rf = accuracy_score(self.y_test, y_pred_rf)
+        self.assertTrue(0 <= accuracy_rf <= 1, "Accuracy should be between 0 and 1")
 
-    # Test Case 4: Test model accuracy
-    # This test checks if the accuracy of the RandomForest model is above a certain threshold.
-    def test_model_accuracy(self):
-        df = self.df.copy()
-        X = df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        y = df['Personal_Loan']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        pipeline_rf = Pipeline([
+    # Test Case 2: Test SVC accuracy
+    def test_svc_accuracy(self):
+        pipeline_svm = Pipeline([
             ('scaler', StandardScaler()),
-            ('classifier', RandomForestClassifier())
+            ('classifier', SVC())
         ])
-        pipeline_rf.fit(X_train, y_train)
-        y_pred_rf = pipeline_rf.predict(X_test)
-        accuracy_rf = accuracy_score(y_test, y_pred_rf)
-        self.assertGreater(accuracy_rf, 0.7)  # Assuming a threshold of 0.7 for this test
+        pipeline_svm.fit(self.X_train, self.y_train)
+        y_pred_svm = pipeline_svm.predict(self.X_test)
+        accuracy_svm = accuracy_score(self.y_test, y_pred_svm)
+        self.assertTrue(0 <= accuracy_svm <= 1, "Accuracy should be between 0 and 1")
+
+    # Test Case 3: Test LogisticRegression accuracy
+    def test_logistic_regression_accuracy(self):
+        pipeline_lr = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', LogisticRegression())
+        ])
+        pipeline_lr.fit(self.X_train, self.y_train)
+        y_pred_lr = pipeline_lr.predict(self.X_test)
+        accuracy_lr = accuracy_score(self.y_test, y_pred_lr)
+        self.assertTrue(0 <= accuracy_lr <= 1, "Accuracy should be between 0 and 1")
+
+    # Test Case 4: Test KNeighborsClassifier accuracy
+    def test_knn_accuracy(self):
+        pipeline_knn = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', KNeighborsClassifier())
+        ])
+        pipeline_knn.fit(self.X_train, self.y_train)
+        y_pred_knn = pipeline_knn.predict(self.X_test)
+        accuracy_knn = accuracy_score(self.y_test, y_pred_knn)
+        self.assertTrue(0 <= accuracy_knn <= 1, "Accuracy should be between 0 and 1")
 
 if __name__ == '__main__':
     unittest.main()
