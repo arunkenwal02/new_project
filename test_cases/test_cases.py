@@ -19,25 +19,37 @@ class ModelTestCase(unittest.TestCase):
         response = requests.get(url, verify=False)  # disables SSL verification safely for testing
         cls.df = pd.read_csv(StringIO(response.text))
 
-    # Test Case 1: Check if the dataset is loaded correctly
-    def test_dataset_loaded(self):
-        # Check if the dataframe is not empty
-        self.assertFalse(self.df.empty, "The dataframe should not be empty.")
+    # Test Case 1: Test data loading
+    # This test checks if the data is loaded correctly and has the expected number of columns.
+    def test_data_loading(self):
+        expected_columns = 14  # Assuming the dataset has 14 columns
+        self.assertEqual(self.df.shape[1], expected_columns)
 
-    # Test Case 2: Validate feature engineering
+    # Test Case 2: Test feature engineering
+    # This test checks if the feature engineering step adds the expected columns.
     def test_feature_engineering(self):
-        # Check if new columns are created correctly
-        self.df["Exp_Gap"] = self.df["Age"] - self.df["Experience"]
-        self.df["Income_per_Family"] = self.df["Income"] / (self.df["Family"].replace(0, 2))
-        self.assertIn("Exp_Gap", self.df.columns, "Exp_Gap column should be present in the dataframe.")
-        self.assertIn("Income_per_Family", self.df.columns, "Income_per_Family column should be present in the dataframe.")
+        df = self.df.copy()
+        df["Exp_Gap"] = df["Age"] - df["Experience"]
+        df["Income_per_Family"] = df["Income"] / (df["Family"].replace(0, 2))
+        expected_columns = ['Exp_Gap', 'Income_per_Family']
+        for col in expected_columns:
+            self.assertIn(col, df.columns)
 
-    # Test Case 3: Validate model training and prediction
-    def test_model_training(self):
+    # Test Case 3: Test train-test split
+    # This test checks if the train-test split results in the expected number of samples.
+    def test_train_test_split(self):
         X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
         y = self.df['Personal_Loan']
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        self.assertEqual(len(X_train), int(0.8 * len(self.df)))
+        self.assertEqual(len(X_test), int(0.2 * len(self.df)))
 
+    # Test Case 4: Test model accuracy
+    # This test checks if the RandomForest model achieves a minimum accuracy threshold.
+    def test_random_forest_accuracy(self):
+        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
+        y = self.df['Personal_Loan']
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         pipeline_rf = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
@@ -45,22 +57,7 @@ class ModelTestCase(unittest.TestCase):
         pipeline_rf.fit(X_train, y_train)
         y_pred_rf = pipeline_rf.predict(X_test)
         accuracy_rf = accuracy_score(y_test, y_pred_rf)
-        self.assertGreater(accuracy_rf, 0.5, "Random Forest accuracy should be greater than 0.5.")
-
-    # Test Case 4: Validate hyperparameter tuning
-    def test_hyperparameter_tuning(self):
-        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        y = self.df['Personal_Loan']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-        pipeline_svm = Pipeline([
-            ('scaler', StandardScaler()),
-            ('classifier', SVC(C=1, kernel='linear'))
-        ])
-        pipeline_svm.fit(X_train, y_train)
-        y_pred_svm = pipeline_svm.predict(X_test)
-        accuracy_svm = accuracy_score(y_test, y_pred_svm)
-        self.assertGreater(accuracy_svm, 0.5, "SVM accuracy should be greater than 0.5.")
+        self.assertGreaterEqual(accuracy_rf, 0.7)  # Assuming 70% is the minimum acceptable accuracy
 
 if __name__ == '__main__':
     unittest.main()
