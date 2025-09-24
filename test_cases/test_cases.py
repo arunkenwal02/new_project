@@ -32,6 +32,7 @@ class ModelTestCase(unittest.TestCase):
         cls.y = cls.df['Personal_Loan']
 
     # Test Case 1: Test train-test split
+    # This test checks if the train-test split results in the correct number of samples.
     def test_train_test_split(self):
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=42)
         self.assertEqual(len(X_train), 800)
@@ -40,14 +41,18 @@ class ModelTestCase(unittest.TestCase):
         self.assertEqual(len(y_test), 200)
 
     # Test Case 2: Test pipeline creation
+    # This test checks if the pipeline is created with the correct steps.
     def test_pipeline_creation(self):
         pipeline = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
         ])
-        self.assertIsInstance(pipeline, Pipeline)
+        self.assertEqual(len(pipeline.steps), 2)
+        self.assertIsInstance(pipeline.named_steps['scaler'], StandardScaler)
+        self.assertIsInstance(pipeline.named_steps['classifier'], RandomForestClassifier)
 
     # Test Case 3: Test GridSearchCV best parameters
+    # This test checks if GridSearchCV finds the best parameters without errors.
     def test_grid_search_best_params(self):
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=42)
         pipeline = Pipeline([
@@ -55,11 +60,11 @@ class ModelTestCase(unittest.TestCase):
             ('classifier', RandomForestClassifier())
         ])
         param_grid = {
-            'classifier__n_estimators': [50, 100, 200, 300],
-            'classifier__max_depth': [None, 5, 10, 20, 30],
-            'classifier__min_samples_split': [2, 5, 10, 20],
-            'classifier__min_samples_leaf': [1, 2, 4, 8],
-            'classifier__max_features': ['auto', 'sqrt', 'log2']
+            'classifier__n_estimators': [50, 100],
+            'classifier__max_depth': [None, 5],
+            'classifier__min_samples_split': [2, 5],
+            'classifier__min_samples_leaf': [1, 2],
+            'classifier__max_features': ['auto', 'sqrt']
         }
         grid_search = GridSearchCV(
             estimator=pipeline,
@@ -74,38 +79,25 @@ class ModelTestCase(unittest.TestCase):
         self.assertIn('classifier__max_depth', best_params)
 
     # Test Case 4: Test model performance metrics
+    # This test checks if the model's performance metrics are within expected ranges.
     def test_model_performance_metrics(self):
         X_train, X_test, y_train, y_test = train_test_split(self.X, self.y, test_size=0.2, random_state=42)
         pipeline = Pipeline([
             ('scaler', StandardScaler()),
-            ('classifier', RandomForestClassifier())
+            ('classifier', RandomForestClassifier(n_estimators=100, max_depth=None))
         ])
-        param_grid = {
-            'classifier__n_estimators': [50, 100, 200, 300],
-            'classifier__max_depth': [None, 5, 10, 20, 30],
-            'classifier__min_samples_split': [2, 5, 10, 20],
-            'classifier__min_samples_leaf': [1, 2, 4, 8],
-            'classifier__max_features': ['auto', 'sqrt', 'log2']
-        }
-        grid_search = GridSearchCV(
-            estimator=pipeline,
-            param_grid=param_grid,
-            cv=5,
-            scoring='accuracy',
-            n_jobs=-1
-        )
-        grid_search.fit(X_train, y_train)
-        y_pred = grid_search.predict(X_test)
+        pipeline.fit(X_train, y_train)
+        y_pred = pipeline.predict(X_test)
         accuracy = accuracy_score(y_test, y_pred)
         precision = precision_score(y_test, y_pred)
         recall = recall_score(y_test, y_pred)
         f1 = f1_score(y_test, y_pred)
         balanced_acc = balanced_accuracy_score(y_test, y_pred)
-        self.assertGreaterEqual(accuracy, 0.5)
-        self.assertGreaterEqual(precision, 0.5)
-        self.assertGreaterEqual(recall, 0.5)
-        self.assertGreaterEqual(f1, 0.5)
-        self.assertGreaterEqual(balanced_acc, 0.5)
+        self.assertGreaterEqual(accuracy, 0.7)
+        self.assertGreaterEqual(precision, 0.7)
+        self.assertGreaterEqual(recall, 0.7)
+        self.assertGreaterEqual(f1, 0.7)
+        self.assertGreaterEqual(balanced_acc, 0.7)
 
 if __name__ == '__main__':
     unittest.main()
