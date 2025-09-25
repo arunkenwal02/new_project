@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, balanced_accuracy_score
 import numpy as np
 
-class ModelTest(unittest.TestCase):
+class ModelTestCase(unittest.TestCase):
     # setUpClass to fetch dataset
     @classmethod
     def setUpClass(cls):
@@ -28,41 +28,38 @@ class ModelTest(unittest.TestCase):
         cls.df["Income_Education"] = cls.df["Income"] * cls.df["Education"]
         cls.df["Exp_Education"] = cls.df["Experience"] * cls.df["Education"]
         cls.df["CC_per_Family"] = cls.df["CCAvg"] / (cls.df["Family"].replace(0, 1))
+        cls.X = cls.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
+        cls.y = cls.df['Personal_Loan']
+        cls.X_train, cls.X_test, cls.y_train, cls.y_test = train_test_split(cls.X, cls.y, test_size=0.2, random_state=42)
 
-    # Test Case 1: Check if the dataset is loaded correctly
-    def test_dataset_loaded(self):
-        self.assertEqual(len(self.df), 1000)
-        self.assertIn('Personal_Loan', self.df.columns)
-
-    # Test Case 2: Check if feature engineering is applied correctly
-    def test_feature_engineering(self):
+    # Test Case 1: Test data preprocessing
+    # This test checks if the data preprocessing steps are correctly applied.
+    def test_data_preprocessing(self):
         self.assertIn('Exp_Gap', self.df.columns)
         self.assertIn('Income_per_Family', self.df.columns)
         self.assertIn('CC_Spend_Ratio', self.df.columns)
 
-    # Test Case 3: Check if train-test split is performed correctly
+    # Test Case 2: Test train-test split
+    # This test ensures that the train-test split results in the correct number of samples.
     def test_train_test_split(self):
-        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        y = self.df['Personal_Loan']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        self.assertEqual(len(X_train), 800)
-        self.assertEqual(len(X_test), 200)
+        self.assertEqual(len(self.X_train), 800)
+        self.assertEqual(len(self.X_test), 200)
+        self.assertEqual(len(self.y_train), 800)
+        self.assertEqual(len(self.y_test), 200)
 
-    # Test Case 4: Check if the model pipeline is set up and runs without errors
-    def test_model_pipeline(self):
-        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        y = self.df['Personal_Loan']
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    # Test Case 3: Test model training and best parameters
+    # This test checks if the model is trained and best parameters are found.
+    def test_model_training(self):
         pipeline_lr = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
         ])
         param_grid = {
-            'classifier__n_estimators': [50, 100],
-            'classifier__max_depth': [None, 5],
-            'classifier__min_samples_split': [2, 5],
-            'classifier__min_samples_leaf': [1, 2],
-            'classifier__max_features': ['auto', 'sqrt']
+            'classifier__n_estimators': [50, 100, 200, 300],
+            'classifier__max_depth': [None, 5, 10, 20, 30],
+            'classifier__min_samples_split': [2, 5, 10, 20],
+            'classifier__min_samples_leaf': [1, 2, 4, 8],
+            'classifier__max_features': ['auto', 'sqrt', 'log2']
         }
         grid_search = GridSearchCV(
             estimator=pipeline_lr,
@@ -71,10 +68,43 @@ class ModelTest(unittest.TestCase):
             scoring='accuracy',
             n_jobs=-1
         )
-        grid_search.fit(X_train, y_train)
-        y_pred_lr = grid_search.predict(X_test)
-        accuracy_lr = accuracy_score(y_test, y_pred_lr)
-        self.assertGreater(accuracy_lr, 0.5)  # Assuming a baseline accuracy of 50%
+        grid_search.fit(self.X_train, self.y_train)
+        best_params = grid_search.best_params_
+        self.assertIsNotNone(best_params)
+
+    # Test Case 4: Test model performance metrics
+    # This test checks if the model's performance metrics are within expected ranges.
+    def test_model_performance(self):
+        pipeline_lr = Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', RandomForestClassifier())
+        ])
+        param_grid = {
+            'classifier__n_estimators': [50, 100, 200, 300],
+            'classifier__max_depth': [None, 5, 10, 20, 30],
+            'classifier__min_samples_split': [2, 5, 10, 20],
+            'classifier__min_samples_leaf': [1, 2, 4, 8],
+            'classifier__max_features': ['auto', 'sqrt', 'log2']
+        }
+        grid_search = GridSearchCV(
+            estimator=pipeline_lr,
+            param_grid=param_grid,
+            cv=5,
+            scoring='accuracy',
+            n_jobs=-1
+        )
+        grid_search.fit(self.X_train, self.y_train)
+        y_pred_lr = grid_search.predict(self.X_test)
+        accuracy_lr = accuracy_score(self.y_test, y_pred_lr)
+        precision_lr = precision_score(self.y_test, y_pred_lr)
+        recall = recall_score(self.y_test, y_pred_lr)
+        f1 = f1_score(self.y_test, y_pred_lr)
+        balanced_acc = balanced_accuracy_score(self.y_test, y_pred_lr)
+        self.assertGreaterEqual(accuracy_lr, 0.7)
+        self.assertGreaterEqual(precision_lr, 0.7)
+        self.assertGreaterEqual(recall, 0.7)
+        self.assertGreaterEqual(f1, 0.7)
+        self.assertGreaterEqual(balanced_acc, 0.7)
 
 if __name__ == '__main__':
     unittest.main()
