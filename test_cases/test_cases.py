@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, balanced_accuracy_score
 import numpy as np
 
-class BankLoanModelTest(unittest.TestCase):
+class ModelTest(unittest.TestCase):
     # setUpClass to fetch dataset
     @classmethod
     def setUpClass(cls):
@@ -33,32 +33,48 @@ class BankLoanModelTest(unittest.TestCase):
         cls.X_train, cls.X_test, cls.y_train, cls.y_test = train_test_split(cls.X, cls.y, test_size=0.2, random_state=42)
 
     # Test Case 1: Test data preprocessing
+    # This test checks if the preprocessing steps are applied correctly.
     def test_data_preprocessing(self):
-        # Check if the new features are created
         self.assertIn("Exp_Gap", self.df.columns)
         self.assertIn("Income_per_Family", self.df.columns)
         self.assertIn("CC_Spend_Ratio", self.df.columns)
 
     # Test Case 2: Test train-test split
+    # This test checks if the train-test split results in the correct number of samples.
     def test_train_test_split(self):
-        # Check if the train-test split is correct
         self.assertEqual(len(self.X_train), 800)
         self.assertEqual(len(self.X_test), 200)
         self.assertEqual(len(self.y_train), 800)
         self.assertEqual(len(self.y_test), 200)
 
-    # Test Case 3: Test pipeline creation
-    def test_pipeline_creation(self):
-        # Check if the pipeline is created correctly
-        pipeline = Pipeline([
+    # Test Case 3: Test model training and best parameters
+    # This test checks if the model is trained and best parameters are found.
+    def test_model_training(self):
+        pipeline_lr = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
         ])
-        self.assertIsInstance(pipeline, Pipeline)
+        param_grid = {
+            'classifier__n_estimators': [50, 100, 200, 300],
+            'classifier__max_depth': [None, 5, 10, 20, 30],
+            'classifier__min_samples_split': [2, 5, 10, 20],
+            'classifier__min_samples_leaf': [1, 2, 4, 8],
+            'classifier__max_features': ['auto', 'sqrt', 'log2']
+        }
+        grid_search = GridSearchCV(
+            estimator=pipeline_lr,
+            param_grid=param_grid,
+            cv=5,
+            scoring='accuracy',
+            n_jobs=-1
+        )
+        grid_search.fit(self.X_train, self.y_train)
+        best_params = grid_search.best_params_
+        self.assertIsNotNone(best_params)
 
-    # Test Case 4: Test model training and prediction
-    def test_model_training_and_prediction(self):
-        # Setup and train the model
+    # Test Case 4: Test model performance metrics
+    # This test checks if the model achieves reasonable performance metrics.
+    def test_model_performance(self):
         pipeline_lr = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
@@ -79,12 +95,16 @@ class BankLoanModelTest(unittest.TestCase):
         )
         grid_search.fit(self.X_train, self.y_train)
         y_pred_lr = grid_search.predict(self.X_test)
-        
-        # Check if predictions are made
-        self.assertEqual(len(y_pred_lr), len(self.y_test))
-        # Check if accuracy is within a reasonable range
         accuracy_lr = accuracy_score(self.y_test, y_pred_lr)
-        self.assertGreaterEqual(accuracy_lr, 0.5)
+        precision_lr = precision_score(self.y_test, y_pred_lr)
+        recall = recall_score(self.y_test, y_pred_lr)
+        f1 = f1_score(self.y_test, y_pred_lr)
+        balanced_acc = balanced_accuracy_score(self.y_test, y_pred_lr)
+        self.assertGreater(accuracy_lr, 0.7)
+        self.assertGreater(precision_lr, 0.7)
+        self.assertGreater(recall, 0.7)
+        self.assertGreater(f1, 0.7)
+        self.assertGreater(balanced_acc, 0.7)
 
 if __name__ == '__main__':
     unittest.main()
