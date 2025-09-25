@@ -32,26 +32,35 @@ class ModelTest(unittest.TestCase):
         cls.y = cls.df['Personal_Loan']
         cls.X_train, cls.X_test, cls.y_train, cls.y_test = train_test_split(cls.X, cls.y, test_size=0.2, random_state=42)
 
-    # Test Case 1: Test if the dataset is loaded correctly
-    def test_dataset_loaded(self):
-        self.assertEqual(len(self.df), 1000)
-        self.assertIn('Personal_Loan', self.df.columns)
-
-    # Test Case 2: Test if feature engineering is applied correctly
-    def test_feature_engineering(self):
+    # Test Case 1: Test data preprocessing
+    # This test checks if the preprocessing step correctly modifies the dataframe columns.
+    def test_data_preprocessing(self):
         self.assertIn('Exp_Gap', self.df.columns)
         self.assertIn('Income_per_Family', self.df.columns)
+        self.assertIn('CC_Spend_Ratio', self.df.columns)
 
-    # Test Case 3: Test if the pipeline is set up correctly
-    def test_pipeline_setup(self):
+    # Test Case 2: Test train-test split
+    # This test ensures that the train-test split results in the correct number of samples.
+    def test_train_test_split(self):
+        self.assertEqual(len(self.X_train), 800)
+        self.assertEqual(len(self.X_test), 200)
+        self.assertEqual(len(self.y_train), 800)
+        self.assertEqual(len(self.y_test), 200)
+
+    # Test Case 3: Test pipeline creation
+    # This test checks if the pipeline is created with the correct steps.
+    def test_pipeline_creation(self):
         pipeline = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
         ])
-        self.assertIsInstance(pipeline, Pipeline)
+        self.assertEqual(len(pipeline.steps), 2)
+        self.assertIsInstance(pipeline.named_steps['scaler'], StandardScaler)
+        self.assertIsInstance(pipeline.named_steps['classifier'], RandomForestClassifier)
 
-    # Test Case 4: Test if the model training and prediction works
-    def test_model_training_and_prediction(self):
+    # Test Case 4: Test model performance metrics
+    # This test checks if the model's performance metrics are within expected ranges.
+    def test_model_performance(self):
         pipeline_lr = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
@@ -73,7 +82,15 @@ class ModelTest(unittest.TestCase):
         grid_search.fit(self.X_train, self.y_train)
         y_pred_lr = grid_search.predict(self.X_test)
         accuracy_lr = accuracy_score(self.y_test, y_pred_lr)
-        self.assertGreater(accuracy_lr, 0.5)  # Assuming a baseline accuracy of 50%
+        precision_lr = precision_score(self.y_test, y_pred_lr)
+        recall = recall_score(self.y_test, y_pred_lr)
+        f1 = f1_score(self.y_test, y_pred_lr)
+        balanced_acc = balanced_accuracy_score(self.y_test, y_pred_lr)
+        self.assertGreaterEqual(accuracy_lr, 0.7)
+        self.assertGreaterEqual(precision_lr, 0.7)
+        self.assertGreaterEqual(recall, 0.7)
+        self.assertGreaterEqual(f1, 0.7)
+        self.assertGreaterEqual(balanced_acc, 0.7)
 
 if __name__ == '__main__':
     unittest.main()
