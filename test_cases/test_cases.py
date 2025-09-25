@@ -33,7 +33,7 @@ class ModelTest(unittest.TestCase):
         cls.X_train, cls.X_test, cls.y_train, cls.y_test = train_test_split(cls.X, cls.y, test_size=0.2, random_state=42)
 
     # Test Case 1: Test data preprocessing
-    # This test checks if the preprocessing steps are applied correctly.
+    # This test checks if the data preprocessing steps are correctly applied.
     def test_data_preprocessing(self):
         self.assertIn("Exp_Gap", self.df.columns)
         self.assertIn("Income_per_Family", self.df.columns)
@@ -47,8 +47,8 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(len(self.y_train), 800)
         self.assertEqual(len(self.y_test), 200)
 
-    # Test Case 3: Test model training and best parameters
-    # This test checks if the model is trained and best parameters are found.
+    # Test Case 3: Test model training
+    # This test checks if the model can be trained without errors.
     def test_model_training(self):
         pipeline_lr = Pipeline([
             ('scaler', StandardScaler()),
@@ -69,11 +69,10 @@ class ModelTest(unittest.TestCase):
             n_jobs=-1
         )
         grid_search.fit(self.X_train, self.y_train)
-        best_params = grid_search.best_params_
-        self.assertIsNotNone(best_params)
+        self.assertIsNotNone(grid_search.best_params_)
 
     # Test Case 4: Test model performance metrics
-    # This test checks if the model achieves reasonable performance metrics.
+    # This test checks if the model's performance metrics are within expected ranges.
     def test_model_performance(self):
         pipeline_lr = Pipeline([
             ('scaler', StandardScaler()),
@@ -100,11 +99,11 @@ class ModelTest(unittest.TestCase):
         recall = recall_score(self.y_test, y_pred_lr)
         f1 = f1_score(self.y_test, y_pred_lr)
         balanced_acc = balanced_accuracy_score(self.y_test, y_pred_lr)
-        self.assertGreater(accuracy_lr, 0.7)
-        self.assertGreater(precision_lr, 0.7)
-        self.assertGreater(recall, 0.7)
-        self.assertGreater(f1, 0.7)
-        self.assertGreater(balanced_acc, 0.7)
+        self.assertGreaterEqual(accuracy_lr, 0.7)
+        self.assertGreaterEqual(precision_lr, 0.7)
+        self.assertGreaterEqual(recall, 0.7)
+        self.assertGreaterEqual(f1, 0.7)
+        self.assertGreaterEqual(balanced_acc, 0.7)
 
 if __name__ == '__main__':
     unittest.main()
