@@ -31,16 +31,16 @@ class ModelTest(unittest.TestCase):
 
     # Test Case 1: Check if the dataset is loaded correctly
     def test_dataset_loaded(self):
-        self.assertIsNotNone(self.df)
         self.assertEqual(len(self.df), 1000)
+        self.assertIn('Personal_Loan', self.df.columns)
 
     # Test Case 2: Check if feature engineering is applied correctly
     def test_feature_engineering(self):
-        self.assertIn("Exp_Gap", self.df.columns)
-        self.assertIn("Income_per_Family", self.df.columns)
-        self.assertIn("CC_Spend_Ratio", self.df.columns)
+        self.assertIn('Exp_Gap', self.df.columns)
+        self.assertIn('Income_per_Family', self.df.columns)
+        self.assertIn('CC_Spend_Ratio', self.df.columns)
 
-    # Test Case 3: Check if train-test split maintains the correct proportions
+    # Test Case 3: Check if train-test split is performed correctly
     def test_train_test_split(self):
         X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
         y = self.df['Personal_Loan']
@@ -48,7 +48,7 @@ class ModelTest(unittest.TestCase):
         self.assertEqual(len(X_train), 800)
         self.assertEqual(len(X_test), 200)
 
-    # Test Case 4: Check if the model pipeline can be fitted without errors
+    # Test Case 4: Check if the model pipeline is set up and runs without errors
     def test_model_pipeline(self):
         X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
         y = self.df['Personal_Loan']
@@ -72,7 +72,9 @@ class ModelTest(unittest.TestCase):
             n_jobs=-1
         )
         grid_search.fit(X_train, y_train)
-        self.assertIsNotNone(grid_search.best_params_)
+        y_pred_lr = grid_search.predict(X_test)
+        accuracy_lr = accuracy_score(y_test, y_pred_lr)
+        self.assertGreater(accuracy_lr, 0.5)  # Assuming a baseline accuracy of 50%
 
 if __name__ == '__main__':
     unittest.main()
