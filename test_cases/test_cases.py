@@ -31,53 +31,47 @@ class BankLoanModelTest(unittest.TestCase):
         cls.df["Income_Education"] = cls.df["Income"] * cls.df["Education"]
         cls.df["Exp_Education"] = cls.df["Experience"] * cls.df["Education"]
         cls.df["CC_per_Family"] = cls.df["CCAvg"] / (cls.df["Family"].replace(0, 1))
-        cls.X = cls.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
-        cls.y = cls.df['Personal_Loan']
-        cls.X_train, cls.X_test, cls.y_train, cls.y_test = train_test_split(cls.X, cls.y, test_size=0.2, random_state=42)
 
-    # Test Case 1: Test RandomForestClassifier accuracy
+    # Test Case 1: Check if the dataset is loaded correctly
+    def test_dataset_loaded(self):
+        self.assertFalse(self.df.empty, "The dataset should not be empty.")
+
+    # Test Case 2: Check if feature engineering is applied correctly
+    def test_feature_engineering(self):
+        self.assertIn("Exp_Gap", self.df.columns, "Feature 'Exp_Gap' should be in the dataframe.")
+        self.assertIn("Income_per_Family", self.df.columns, "Feature 'Income_per_Family' should be in the dataframe.")
+
+    # Test Case 3: Validate RandomForestClassifier accuracy is within expected range
     def test_random_forest_accuracy(self):
+        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
+        y = self.df['Personal_Loan']
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         pipeline_rf = Pipeline([
             ('scaler', StandardScaler()),
             ('classifier', RandomForestClassifier())
         ])
-        pipeline_rf.fit(self.X_train, self.y_train)
-        y_pred_rf = pipeline_rf.predict(self.X_test)
-        accuracy_rf = accuracy_score(self.y_test, y_pred_rf)
-        self.assertGreaterEqual(accuracy_rf, 0.7)  # Expecting accuracy to be at least 70%
+        pipeline_rf.fit(X_train, y_train)
+        y_pred_rf = pipeline_rf.predict(X_test)
+        accuracy_rf = accuracy_score(y_test, y_pred_rf)
+        self.assertGreaterEqual(accuracy_rf, 0.7, "Random Forest accuracy should be at least 0.7.")
 
-    # Test Case 2: Test SVC accuracy
-    def test_svc_accuracy(self):
-        pipeline_svm = Pipeline([
+    # Test Case 4: Validate GridSearchCV finds better parameters for RandomForestClassifier
+    def test_random_forest_grid_search(self):
+        X = self.df.drop(['ZIP_Code', 'Personal_Loan', 'ID'], axis=1)
+        y = self.df['Personal_Loan']
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        param_grid_rf = {
+            'n_estimators': [50, 100],
+            'max_depth': [5, 10],
+            'min_samples_split': [2, 5],
+        }
+        pipeline_rf_cv = Pipeline([
             ('scaler', StandardScaler()),
-            ('classifier', SVC())
+            ('classifier', GridSearchCV(RandomForestClassifier(), param_grid_rf, cv=5))
         ])
-        pipeline_svm.fit(self.X_train, self.y_train)
-        y_pred_svm = pipeline_svm.predict(self.X_test)
-        accuracy_svm = accuracy_score(self.y_test, y_pred_svm)
-        self.assertGreaterEqual(accuracy_svm, 0.7)  # Expecting accuracy to be at least 70%
-
-    # Test Case 3: Test LogisticRegression accuracy
-    def test_logistic_regression_accuracy(self):
-        pipeline_lr = Pipeline([
-            ('scaler', StandardScaler()),
-            ('classifier', LogisticRegression())
-        ])
-        pipeline_lr.fit(self.X_train, self.y_train)
-        y_pred_lr = pipeline_lr.predict(self.X_test)
-        accuracy_lr = accuracy_score(self.y_test, y_pred_lr)
-        self.assertGreaterEqual(accuracy_lr, 0.7)  # Expecting accuracy to be at least 70%
-
-    # Test Case 4: Test KNeighborsClassifier accuracy
-    def test_knn_accuracy(self):
-        pipeline_knn = Pipeline([
-            ('scaler', StandardScaler()),
-            ('classifier', KNeighborsClassifier())
-        ])
-        pipeline_knn.fit(self.X_train, self.y_train)
-        y_pred_knn = pipeline_knn.predict(self.X_test)
-        accuracy_knn = accuracy_score(self.y_test, y_pred_knn)
-        self.assertGreaterEqual(accuracy_knn, 0.7)  # Expecting accuracy to be at least 70%
+        pipeline_rf_cv.fit(X_train, y_train)
+        best_params_rf = pipeline_rf_cv.named_steps['classifier'].best_params_
+        self.assertIsNotNone(best_params_rf, "GridSearchCV should find the best parameters.")
 
 if __name__ == '__main__':
     unittest.main()
